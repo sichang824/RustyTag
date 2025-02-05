@@ -47,7 +47,7 @@ pub fn get_latest_tag() -> Result<String> {
     // 获取最新的有效版本标签
     let latest_tag = tags
         .iter()
-        .filter_map(|t| t)
+        .flatten()
         .filter_map(|t| Version::parse(t).ok())
         .max()
         .map(|v| v.to_string())

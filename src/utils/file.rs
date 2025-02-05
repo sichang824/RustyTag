@@ -100,6 +100,7 @@ pub fn create_gitignore() -> Result<()> {
     let mut gitignore = OpenOptions::new()
         .write(true)
         .create(true)
+        .truncate(true)
         .open(".gitignore")?;
 
     writeln!(gitignore, "/target")?;
