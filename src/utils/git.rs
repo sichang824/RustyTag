@@ -279,30 +279,29 @@ pub fn add_project_files(repo: &Repository) -> Result<()> {
     Ok(())
 }
 
-/// 获取两个 tag 之间的所有提交
-pub fn get_commits_between_tags(from_tag: &str, to_tag: &str) -> Result<Vec<GitCommit>> {
+/// 获取指定 tag 之后的所有新提交
+pub fn get_commits_after_tag(tag: &str) -> Result<Vec<GitCommit>> {
     let repo = Repository::open(".")?;
     let mut commits = Vec::new();
 
-    // 获取两个 tag 对应的 commit，不再添加 'v' 前缀
-    let from_obj = repo.revparse_single(from_tag)?;
-    let to_obj = repo.revparse_single(to_tag)?;
+    // 获取 tag 对应的 commit
+    let tag_obj = repo.revparse_single(tag)?;
+    let tag_commit = tag_obj.peel_to_commit()?;
 
-    let from_commit = from_obj.peel_to_commit()?;
-    let to_commit = to_obj.peel_to_commit()?;
+    // 获取 HEAD commit
+    let head = repo.head()?.peel_to_commit()?;
 
     // 创建一个版本遍历器
     let mut revwalk = repo.revwalk()?;
-    revwalk.push(to_commit.id())?;
+    revwalk.push(head.id())?;
 
-    // 设置遍历范围：从 to_tag 到 from_tag
-    revwalk.hide(from_commit.id())?;
+    // 设置遍历范围：从 HEAD 到 tag
+    revwalk.hide(tag_commit.id())?;
 
     // 遍历所有提交
     for oid in revwalk {
         let commit_id = oid?;
         let commit = repo.find_commit(commit_id)?;
-
         let message = commit.message().unwrap_or("").trim().to_string();
 
         commits.push(GitCommit {

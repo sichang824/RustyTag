@@ -67,11 +67,8 @@ pub fn create_changelog(version: &Version) -> Result<()> {
         println!("⚠️ 未找到上一个版本，获取所有提交");
         crate::utils::git::get_git_commits()?
     } else {
-        println!("📊 获取从 v{} 到 v{} 之间的提交", previous_version, version);
-        crate::utils::git::get_commits_between_tags(
-            &format!("{}", previous_version),
-            &format!("{}", version),
-        )?
+        println!("📊 获取 {} 之后的新提交", previous_version);
+        crate::utils::git::get_commits_after_tag(&previous_version)?
     };
     println!("✅ 获取到 {} 条提交记录", commits.len());
 
