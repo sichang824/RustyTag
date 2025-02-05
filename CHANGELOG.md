@@ -11,9 +11,9 @@
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://www.conventionalcommits.org/) specification when making commits.
 
 ---
-### [0.1.20](https://github.com/sichang824/RustyTag/compare/0.1.19...0.1.20) (2025-02-05)
+### [0.1.21](https://github.com/sichang824/RustyTag/compare/0.1.20...0.1.21) (2025-02-05)
 
 ### Commits
 
-* Enhances tag message with improved changelog parsing ([49f94f2](https://github.com/sichang824/RustyTag/commit/49f94f27195877fe43b30ac6390d8f0f4772afe4))
+* Refactors GitHub release and config handling ([ef304f4](https://github.com/sichang824/RustyTag/commit/ef304f408197e7aa720960d88f17ea44645abd06))
 
