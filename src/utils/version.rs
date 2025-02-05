@@ -82,10 +82,10 @@ fn update_pyproject_toml(version: &Version) -> Result<()> {
 
 pub fn get_latest_version() -> Result<Version> {
     let latest_tag = crate::utils::git::get_latest_tag()?;
-    
+
     if latest_tag == "initial" {
         return Ok(Version::new(0, 1, 0));
     }
-    
+
     Ok(Version::parse(&latest_tag)?)
 }
