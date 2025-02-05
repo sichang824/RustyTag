@@ -42,6 +42,12 @@ enum Commands {
         #[arg(short, long)]
         tag: Option<String>,
     },
+    /// Configure RustyTag settings
+    Config {
+        /// Set a configuration value (e.g., GITHUB_TOKEN=xxx)
+        #[arg(short, long)]
+        set: Option<String>,
+    },
 }
 
 fn show_project_info(repo: &Repository) -> Result<()> {
@@ -117,16 +123,22 @@ fn main() -> Result<()> {
                         .unwrap_or("No changelog content");
 
                     // 获取 GitHub token
-                    let token = std::env::var("GITHUB_TOKEN").context(
-                        "GITHUB_TOKEN environment variable not set. To create a GitHub token:\n\
-                         1. Visit https://github.com/settings/tokens\n\
-                         2. Click 'Generate new token' (classic)\n\
-                         3. Select the 'repo' scope\n\
-                         4. Generate and copy the token\n\
-                         5. Set it in your environment:\n\
-                            export GITHUB_TOKEN=your_token\n\
-                         Note: For permanent setup, add it to your shell profile (~/.bashrc, ~/.zshrc, etc.)"
-                    )?;
+                    let token = if let Ok(token) = std::env::var("GITHUB_TOKEN") {
+                        token
+                    } else {
+                        let config = utils::config::Config::load()?;
+                        config.github_token.ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "GitHub token not found. To set it up:\n\
+                                 1. Visit https://github.com/settings/tokens\n\
+                                 2. Click 'Generate new token' (classic)\n\
+                                 3. Select the 'repo' scope\n\
+                                 4. Generate and copy the token\n\
+                                 5. Set it using:\n\
+                                    rustytag config --set GITHUB_TOKEN=your_token"
+                            )
+                        })?
+                    };
 
                     // 获取仓库 URL
                     let repo_url = utils::git::get_remote_url()?;
@@ -142,6 +154,31 @@ fn main() -> Result<()> {
                         )
                         .await
                     })?;
+                }
+                Commands::Config { set } => {
+                    let mut config = utils::config::Config::load()?;
+                    if let Some(set_str) = set {
+                        let parts: Vec<&str> = set_str.splitn(2, '=').collect();
+                        if parts.len() != 2 {
+                            return Err(anyhow::anyhow!("Invalid format. Use KEY=VALUE"));
+                        }
+                        config.set(parts[0], parts[1])?;
+                        println!("✔ Configuration updated");
+                    } else {
+                        // 显示当前配置
+                        println!("\n⚙️  Current Configuration");
+                        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                        if let Some(token) = &config.github_token {
+                            println!(
+                                "🔑 GITHUB_TOKEN: {}...{}",
+                                &token[..7],
+                                &token[token.len() - 4..]
+                            );
+                        } else {
+                            println!("🔑 GITHUB_TOKEN: Not set");
+                        }
+                        println!();
+                    }
                 }
                 _ => unreachable!(),
             }
