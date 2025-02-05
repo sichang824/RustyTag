@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use git2::Repository;
+use semver::Version;
 use std::path::Path;
 
 mod utils;
@@ -8,8 +9,8 @@ mod utils;
 use utils::{
     file::create_changelog,
     git::{
-        commit_changes, create_tag, get_latest_tag, get_project_info, initialize_git_repo,
-        reset_tags, add_project_files,
+        add_project_files, commit_changes, create_tag, get_latest_tag, get_project_info,
+        initialize_git_repo, reset_tags,
     },
     version::{bump_version, update_version_to_project, BumpType},
 };
@@ -35,6 +36,12 @@ enum Commands {
     Reset,
     /// Show current version information
     Show,
+    /// Create a release with changelog
+    Release {
+        /// Specify a tag version to release
+        #[arg(short, long)]
+        tag: Option<String>,
+    },
 }
 
 fn show_project_info(repo: &Repository) -> Result<()> {
@@ -94,6 +101,19 @@ fn main() -> Result<()> {
                 }
                 Commands::Show => {
                     show_project_info(&repo)?;
+                }
+                Commands::Release { tag } => {
+                    let version = if let Some(tag_str) = tag {
+                        Version::parse(&tag_str).context("Invalid version format")?
+                    } else {
+                        get_latest_tag(&repo)?
+                    };
+
+                    create_changelog(&version)?;
+                    commit_changes(&repo, &version)?;
+                    create_tag(&repo, &version)?;
+                    println!("\nℹ Run the following command to publish the release");
+                    println!("git push --follow-tags origin main\n");
                 }
                 _ => unreachable!(),
             }
