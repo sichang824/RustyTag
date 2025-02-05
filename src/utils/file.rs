@@ -64,72 +64,24 @@ pub fn create_changelog(version: &Version) -> Result<()> {
     };
     println!("✅ 获取到 {} 条提交记录", commits.len());
 
-    // 分类处理提交信息
-    let mut features = Vec::new();
-    let mut fixes = Vec::new();
-    let mut breaking_changes = Vec::new();
-
+    // 写入所有提交
+    writeln!(file, "### Commits")?;
+    writeln!(file)?;
     for commit in &commits {
-        println!("📝 处理提交: {} - {}", &commit.hash[..7], &commit.message);
-        if commit.message.starts_with("feat:") {
-            features.push(format!(
-                "{} ([{}]({}/commit/{}))",
-                commit.message[5..].trim(),
-                &commit.hash[..7],
-                remote_url.trim_end_matches(".git"),
-                commit.hash
-            ));
-        } else if commit.message.starts_with("fix:") {
-            fixes.push(format!(
-                "{} ([{}]({}/commit/{}))",
-                commit.message[4..].trim(),
-                &commit.hash[..7],
-                remote_url.trim_end_matches(".git"),
-                commit.hash
-            ));
-        } else if commit.message.contains("BREAKING CHANGE:") {
-            breaking_changes.push(format!(
-                "{} ([{}]({}/commit/{}))",
-                commit.message,
-                &commit.hash[..7],
-                remote_url.trim_end_matches(".git"),
-                commit.hash
-            ));
+        // 跳过 "chore: release" 提交
+        if commit.message.starts_with("chore: release") {
+            continue;
         }
+        writeln!(
+            file,
+            "* {} ([{}]({}/commit/{}))",
+            commit.message.lines().next().unwrap_or("").trim(),
+            &commit.hash[..7],
+            remote_url.trim_end_matches(".git"),
+            commit.hash
+        )?;
     }
-
-    println!("📊 统计结果:");
-    println!("- Features: {}", features.len());
-    println!("- Bug Fixes: {}", fixes.len());
-    println!("- Breaking Changes: {}", breaking_changes.len());
-
-    // 写入分类内容
-    if !features.is_empty() {
-        writeln!(file, "### Features")?;
-        writeln!(file)?;
-        for feat in features {
-            writeln!(file, "* {}", feat)?;
-        }
-        writeln!(file)?;
-    }
-
-    if !fixes.is_empty() {
-        writeln!(file, "### Bug Fixes")?;
-        writeln!(file)?;
-        for fix in fixes {
-            writeln!(file, "* {}", fix)?;
-        }
-        writeln!(file)?;
-    }
-
-    if !breaking_changes.is_empty() {
-        writeln!(file, "### BREAKING CHANGES")?;
-        writeln!(file)?;
-        for bc in breaking_changes {
-            writeln!(file, "* {}", bc)?;
-        }
-        writeln!(file)?;
-    }
+    writeln!(file)?;
 
     println!("✨ CHANGELOG.md 生成完成");
     Ok(())
