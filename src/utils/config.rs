@@ -3,24 +3,30 @@ use dirs::home_dir;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Config {
     pub github_token: Option<String>,
 }
 
+#[derive(Debug)]
 pub enum ConfigKey {
     GithubToken,
 }
 
-impl ConfigKey {
-    pub fn from_str(key: &str) -> Result<Self> {
+impl FromStr for ConfigKey {
+    type Err = anyhow::Error;
+
+    fn from_str(key: &str) -> Result<Self, Self::Err> {
         match key {
             "GITHUB_TOKEN" => Ok(ConfigKey::GithubToken),
             _ => Err(anyhow::anyhow!("Unknown configuration key: {}", key)),
         }
     }
+}
 
+impl ConfigKey {
     fn as_str(&self) -> &'static str {
         match self {
             ConfigKey::GithubToken => "GITHUB_TOKEN",
