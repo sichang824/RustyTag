@@ -11,7 +11,7 @@ use utils::{
     file::create_changelog,
     git::{
         add_project_files, commit_changes, create_tag, get_project_info, initialize_git_repo,
-        reset_tags, show_and_sync_tags,
+        reset_tags,
     },
     version::{bump_version, get_latest_version, update_version_to_project, BumpType},
 };
