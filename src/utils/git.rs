@@ -236,7 +236,7 @@ pub fn get_remote_url() -> Result<String> {
     Ok(convert_ssh_to_https(url))
 }
 
-pub fn get_previous_version() -> Result<String> {
+pub fn get_previous_tag() -> Result<String> {
     let repo = Repository::open(Path::new("."))?;
     let tags = repo.tag_names(None)?;
 

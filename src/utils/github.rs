@@ -33,10 +33,53 @@ impl GitHubClient {
         }
     }
 
+    /// 获取上一个发布版本，通过 GitHub API 获取
+    pub async fn get_previous_release() -> Result<String> {
+        let repo_url = super::git::get_remote_url()?;
+
+        // 从 repo_url 提取 owner 和 repo
+        let parts: Vec<&str> = repo_url.trim_end_matches(".git").split('/').collect();
+        if parts.len() < 2 {
+            return Ok("initial".to_string());
+        }
+
+        let owner = parts[parts.len() - 2];
+        let repo = parts[parts.len() - 1];
+
+        // 构建 GitHub API URL
+        let api_url = format!(
+            "https://api.github.com/repos/{}/{}/releases?per_page=2",
+            owner, repo
+        );
+
+        // 发送请求获取最近的两个发布
+        let client = reqwest::Client::new();
+        let response = client
+            .get(&api_url)
+            .header("User-Agent", "RustyTag")
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Ok("initial".to_string());
+        }
+
+        let releases: Vec<serde_json::Value> = response.json().await?;
+
+        // 如果有至少两个发布，返回倒数第二个的标签名
+        if releases.len() >= 2 {
+            if let Some(tag_name) = releases[1].get("tag_name").and_then(|v| v.as_str()) {
+                return Ok(tag_name.to_string());
+            }
+        }
+
+        Ok("initial".to_string())
+    }
+
     /// 创建 GitHub Release
     pub async fn create_release(&self, version: &Version) -> Result<()> {
         // 获取上一个版本
-        let previous_version = crate::utils::git::get_previous_version()?;
+        let previous_version = Self::get_previous_release().await?;
 
         // 生成版本对比链接和标题
         let (title, compare_url) = if previous_version == "initial" {
