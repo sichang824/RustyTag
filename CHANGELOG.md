@@ -12,7 +12,7 @@ This document records all notable changes to the project.
 
 Please follow the [Conventional Commits](https://www.conventionalcommits.org/) specification when making commits.
 
-### [0.1.2](https://github.com/sichang824/RustyTag/commits/v0.1.2) (2025-02-05)
+### [0.1.4](https://github.com/sichang824/RustyTag/commits/v0.1.4) (2025-02-05)
 
-## 0.1.2
+## 0.1.4
 
