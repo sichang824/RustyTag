@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use chrono::Local;
 use semver::Version;
 use serde_json::json;
 
@@ -34,12 +35,69 @@ impl GitHubClient {
 
     /// 创建 GitHub Release
     pub async fn create_release(&self, version: &Version) -> Result<()> {
-        // 读取 changelog 内容
-        let changelog = std::fs::read_to_string("CHANGELOG.md")?;
-        let release_notes = changelog
-            .split("\n\n")
-            .find(|section| section.starts_with(&format!("### [{}]", version)))
-            .unwrap_or("No changelog content");
+        // 获取上一个版本
+        let previous_version = crate::utils::git::get_previous_version()?;
+
+        // 生成版本对比链接和标题
+        let (title, compare_url) = if previous_version == "initial" {
+            (
+                format!(
+                    "### [{}]({}/commits/{}) ({})",
+                    version,
+                    self.repo_url.trim_end_matches(".git"),
+                    version,
+                    Local::now().format("%Y-%m-%d")
+                ),
+                None,
+            )
+        } else {
+            (
+                format!(
+                    "### [{}]({}/compare/{}...{}) ({})",
+                    version,
+                    self.repo_url.trim_end_matches(".git"),
+                    previous_version,
+                    version,
+                    Local::now().format("%Y-%m-%d")
+                ),
+                Some(format!(
+                    "{}/compare/{}...{}",
+                    self.repo_url.trim_end_matches(".git"),
+                    previous_version,
+                    version
+                )),
+            )
+        };
+
+        // 获取提交记录
+        let commits = if previous_version == "initial" {
+            crate::utils::git::get_git_commits()?
+        } else {
+            crate::utils::git::get_commits_after_tag(&previous_version)?
+        };
+
+        // 生成 release notes
+        let mut release_notes = title;
+        release_notes.push_str("\n\n### Commits\n\n");
+
+        for commit in commits {
+            if commit.message.starts_with("chore: release") {
+                continue;
+            }
+            release_notes.push_str(&format!(
+                "* {} ([{}]({}/commit/{}))\n",
+                commit.message.lines().next().unwrap_or("").trim(),
+                &commit.hash[..7],
+                self.repo_url.trim_end_matches(".git"),
+                commit.hash
+            ));
+        }
+
+        // 如果有对比链接，添加到 release notes
+        if let Some(url) = compare_url {
+            release_notes.push_str("\n---\n");
+            release_notes.push_str(&format!("Full Changelog: {}", url));
+        }
 
         // 从 repo_url 提取 owner 和 repo
         let parts: Vec<&str> = self.repo_url.trim_end_matches(".git").split('/').collect();
