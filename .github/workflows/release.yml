@@ -26,18 +26,32 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             suffix: ""
+            install_dependencies: |
+              sudo apt-get update
+              sudo apt-get install -y pkg-config libssl-dev
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             suffix: ".exe"
+            install_dependencies: ""
           - os: macos-latest
             target: x86_64-apple-darwin
             suffix: ""
+            install_dependencies: |
+              brew install openssl@3
+              echo "OPENSSL_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
           - os: macos-latest
             target: aarch64-apple-darwin
             suffix: ""
+            install_dependencies: |
+              brew install openssl@3
+              echo "OPENSSL_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: ${{ matrix.install_dependencies }}
+        shell: bash
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
