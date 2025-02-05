@@ -221,21 +221,23 @@ pub fn get_previous_version() -> Result<String> {
     let tags = repo.tag_names(None)?;
 
     // 过滤并排序版本号
-    let mut versions: Vec<String> = tags
+    let mut versions: Vec<Version> = tags
         .iter()
         .flatten()
         .filter(|&t| t.starts_with('v'))
-        .map(|t| t.to_string())
+        .filter_map(|t| Version::parse(&t[1..]).ok())
         .collect();
 
-    versions.sort_by(|a, b| {
-        let a_version = &a[1..];
-        let b_version = &b[1..];
-        a_version.cmp(b_version)
-    });
+    // 按版本号降序排序
+    versions.sort_by(|a, b| b.cmp(a));
 
-    // 如果没有找到版本号，返回 "initial" 作为默认值
-    Ok(versions.pop().unwrap_or_else(|| "initial".to_string()))
+    // 如果有多于一个版本，返回第二个（即当前版本之前的版本）
+    // 否则返回 "initial"
+    if versions.len() > 1 {
+        Ok(versions[1].to_string())
+    } else {
+        Ok("initial".to_string())
+    }
 }
 
 fn convert_ssh_to_https(url: &str) -> String {
