@@ -20,3 +20,5 @@ Please follow the [Conventional Commits](https://www.conventionalcommits.org/) s
 
 ## 0.1.5
 
+### [0.1.6](https://github.com/sichang824/RustyTag/compare/vinitial...v0.1.6) (2025-02-05)
+
