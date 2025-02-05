@@ -10,5 +10,5 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://www.conventionalcommits.org/) specification when making commits.
 
-### [0.1.7](https://github.com/sichang824/RustyTag/compare/vinitial...v0.1.7) (2025-02-05)
+### [0.1.8](https://github.com/sichang824/RustyTag/compare/vinitial...v0.1.8) (2025-02-05)
 
