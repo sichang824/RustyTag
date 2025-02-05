@@ -39,15 +39,26 @@ pub fn create_changelog(version: &Version) -> Result<()> {
     println!("📌 上一个版本: {}", previous_version);
 
     // 写入版本标题和对比链接
-    writeln!(
-        file,
-        "### [{}]({}/compare/v{}...v{}) ({})",
-        version,
-        remote_url.trim_end_matches(".git"),
-        previous_version,
-        version,
-        date
-    )?;
+    if previous_version == "initial" {
+        writeln!(
+            file,
+            "### [{}]({}/commits/v{}) ({})",
+            version,
+            remote_url.trim_end_matches(".git"),
+            version,
+            date
+        )?;
+    } else {
+        writeln!(
+            file,
+            "### [{}]({}/compare/v{}...v{}) ({})",
+            version,
+            remote_url.trim_end_matches(".git"),
+            previous_version,
+            version,
+            date
+        )?;
+    }
     writeln!(file)?;
 
     // 获取提交记录
