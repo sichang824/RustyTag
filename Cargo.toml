@@ -1,6 +1,6 @@
 [package]
 name = "rustytag"
-version = "0.1.33"
+version = "1.0.0"
 edition = "2021"
 
 [dependencies]
