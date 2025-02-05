@@ -84,9 +84,33 @@ impl GitHubClient {
             if commit.message.starts_with("chore: release") {
                 continue;
             }
+
+            // 获取提交者信息
+            let author = if let Some(author) = commit
+                .message
+                .lines()
+                .next()
+                .and_then(|line| line.rfind(" by @"))
+                .map(|pos| &commit.message[pos..])
+            {
+                author.to_string()
+            } else {
+                String::new()
+            };
+
             release_notes.push_str(&format!(
-                "* {} ([{}]({}/commit/{}))\n",
-                commit.message.lines().next().unwrap_or("").trim(),
+                "* {}{} ([{}]({}/commit/{}))\n",
+                commit
+                    .message
+                    .lines()
+                    .next()
+                    .unwrap_or("")
+                    .trim()
+                    .split(" by @")
+                    .next()
+                    .unwrap_or("")
+                    .trim(), // 移除原有的作者信息
+                author, // 添加作者信息
                 &commit.hash[..7],
                 self.repo_url.trim_end_matches(".git"),
                 commit.hash
