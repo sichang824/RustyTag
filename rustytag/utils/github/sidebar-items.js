@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["create_github_release","list_github_releases"],"struct":["GitHubClient"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ConfigKey"],"fn":["get_config_path","handle_config_command"],"struct":["Config"]};
