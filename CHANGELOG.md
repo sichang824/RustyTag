@@ -16,3 +16,7 @@ Please follow the [Conventional Commits](https://www.conventionalcommits.org/) s
 
 ## 0.1.4
 
+### [0.1.5](https://github.com/sichang824/RustyTag/commits/v0.1.5) (2025-02-05)
+
+## 0.1.5
+
