@@ -1,94 +1,94 @@
+<div align="center">
+
 # RustyTag
 
-A semantic version management tool built on Git tags.
+### 一个基于 Git 标签的语义化版本管理工具
 
-## Features
+[English](README_EN.md) | 简体中文
 
-- Semantic version management using Git tags
-- Semantic versioning support
-- Automatic version bumping (patch/minor/major)
-- Local tag synchronization with remote
-- Tag comparison with previous version
-- Lightweight and fast
-- Cross-platform support
+</div>
 
-## Installation
+## 特性
 
-### Using Cargo
+- 基于 Git 标签的语义化版本管理
+- 完整的语义化版本支持
+- 自动版本升级（patch/minor/major）
+- 本地标签与远程仓库同步
+- 版本对比功能
+- 轻量快速
+- 跨平台支持
+
+## 安装
+
+### 使用 Cargo 安装
 
 ```sh
 cargo install rustytag
 ```
 
-### From Source
+### 从源码安装
 
-1. Clone the repository:
+1. 克隆仓库：
 
 ```sh
 git clone https://github.com/yourusername/rustytag.git
 ```
 
-2. Build the project:
+2. 构建项目：
 
 ```sh
 cd rustytag
 cargo build --release
 ```
 
-## Usage
+## 使用方法
 
-### Basic Commands
+### 基础命令
 
 ```sh
-# Initialize semantic versioning
-
+# 初始化语义化版本
 rustytag init
 
-# Bump patch version (e.g., 1.0.0 -> 1.0.1)
+# 版本升级命令
+rustytag patch  # 升级补丁版本 (例如: 1.0.0 -> 1.0.1)
+rustytag minor  # 升级次要版本 (例如: 1.0.0 -> 1.1.0)
+rustytag major  # 升级主要版本 (例如: 1.0.0 -> 2.0.0)
 
-rustytag patch
+# 标签同步命令
+rustytag sync   # 同步本地标签与远程仓库
+rustytag reset  # 重置本地标签以匹配远程仓库
 
-# Bump minor version (e.g., 1.0.0 -> 1.1.0)
+# 信息查看命令
+rustytag show   # 显示当前版本信息
+rustytag show v1.0.0  # 显示特定标签详情
 
-rustytag minor
+# 发布管理
+rustytag release  # 创建发布
+rustytag release list  # 列出所有发布
 
-# Bump major version (e.g., 1.0.0 -> 2.0.0)
-
-rustytag major
-
-# Reset local tags to match remote
-
-rustytag reset
+# 配置管理
+rustytag config --set KEY=VALUE  # 设置配置项
 ```
 
-### Advanced Usage
+### 命令详解
 
-```sh
-# Show project information
-rustytag show
+- `init`: 初始化新的 Git 仓库并设置语义化版本
+- `patch/minor/major`: 按照语义化版本规范升级版本号
+- `sync`: 将本地标签与远程仓库同步
+- `reset`: 将本地标签重置为与远程仓库一致
+- `show`: 显示版本信息
+- `release`: 管理发布
+- `config`: 配置 RustyTag 设置
 
-# List all release add release link
-rustytag list
+## 贡献
 
-# Show tag details
-rustytag show v1.0.0
+欢迎贡献！详情请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-# Create a release with changelog
-rustytag release
+## 许可证
 
-# Set config
-rustytag config --set XXXX=xxx
-```
+本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件。
 
-## Contributing
+## 致谢
 
-We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Inspired by Git's native tag functionality
-- Built with Rust for performance and safety
+- 灵感来源于 Git 的原生标签功能
+- 使用 Rust 构建以确保性能和安全性
