@@ -69,11 +69,19 @@ pub fn commit_changes(repo: &Repository, version: &Version) -> Result<()> {
 pub fn create_tag(repo: &Repository, version: &Version) -> Result<()> {
     let obj = repo.head()?.peel_to_commit()?.into_object();
     let signature = repo.signature()?;
+
+    // 读取 CHANGELOG.md 的最新版本内容
+    let changelog = std::fs::read_to_string("CHANGELOG.md")?;
+    let version_content = changelog
+        .split("\n\n")
+        .find(|section| section.starts_with(&format!("### [{}]", version)))
+        .unwrap_or("No changelog content");
+
     repo.tag(
         &version.to_string(),
         &obj,
         &signature,
-        &format!("Release {}", version),
+        version_content, // 使用 changelog 内容作为 tag 消息
         false,
     )?;
     println!("✔ [Created] tag {}", version);
