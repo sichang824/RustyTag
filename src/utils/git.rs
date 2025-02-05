@@ -218,25 +218,14 @@ pub fn get_remote_url() -> Result<String> {
 
 pub fn get_previous_version() -> Result<String> {
     let repo = Repository::open(Path::new("."))?;
-    let tags = repo.tag_names(None)?;
 
-    // 过滤并排序版本号
-    let mut versions: Vec<Version> = tags
-        .iter()
-        .flatten()
-        .filter(|&t| t.starts_with('v'))
-        .filter_map(|t| Version::parse(&t[1..]).ok())
-        .collect();
+    // 直接使用 get_latest_tag 获取当前最新的 tag
+    let latest_version = get_latest_tag(&repo)?;
 
-    // 按版本号降序排序
-    versions.sort_by(|a, b| b.cmp(a));
-
-    // 如果有多于一个版本，返回第二个（即当前版本之前的版本）
-    // 否则返回 "initial"
-    if versions.len() > 1 {
-        Ok(versions[1].to_string())
-    } else {
+    if latest_version == Version::new(0, 1, 0) {
         Ok("initial".to_string())
+    } else {
+        Ok(latest_version.to_string())
     }
 }
 
