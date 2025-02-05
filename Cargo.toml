@@ -2,6 +2,14 @@
 name = "rustytag"
 version = "1.0.6"
 edition = "2021"
+description = "A semantic version management tool built on Git tags."
+authors = ["sichang <zhaoanke@163.com>"]
+license = "MIT"
+repository = "https://github.com/sichang824/rustytag"
+documentation = "https://docs.rs/rustytag"
+readme = "README.md"
+keywords = ["git", "semver", "tag", "version", "management"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 anyhow = "1.0.95"

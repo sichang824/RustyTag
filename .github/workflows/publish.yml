@@ -1,0 +1,76 @@
+name: Publish to crates.io
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  publish:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Check version
+        id: check_version
+        run: |
+          RELEASE_VERSION=${GITHUB_REF#refs/tags/}
+          CARGO_VERSION=$(grep '^version = ' Cargo.toml | cut -d '"' -f2)
+          if [ "${RELEASE_VERSION#v}" != "$CARGO_VERSION" ]; then
+            echo "Version mismatch: Release version (${RELEASE_VERSION#v}) != Cargo.toml version ($CARGO_VERSION)"
+            exit 1
+          fi
+          echo "Version check passed: $CARGO_VERSION"
+
+      - name: Run tests
+        run: cargo test --all-features
+
+      - name: Check formatting
+        run: |
+          rustup component add rustfmt
+          cargo fmt -- --check
+
+      - name: Run clippy
+        run: |
+          rustup component add clippy
+          cargo clippy -- -D warnings
+
+      - name: Publish to crates.io
+        uses: katyo/publish-crates@v2
+        with:
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          args: --allow-dirty
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: success()
+        with:
+          generate_release_notes: true
+          files: |
+            target/package/*.crate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify:
+    needs: publish
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Notify success
+        if: needs.publish.result == 'success'
+        run: |
+          echo "✅ Successfully published to crates.io"
+          # 这里可以添加其他通知方式，如 Slack, Discord 等
+
+      - name: Notify failure
+        if: needs.publish.result == 'failure'
+        run: |
+          echo "❌ Failed to publish to crates.io"
+          # 这里可以添加其他通知方式，如 Slack, Discord 等

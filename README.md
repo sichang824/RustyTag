@@ -6,6 +6,10 @@
 
 [English](README_EN.md) | 简体中文
 
+[![Crates.io](https://img.shields.io/crates/v/rustytag.svg)](https://crates.io/crates/rustytag)
+[![Downloads](https://img.shields.io/crates/d/rustytag.svg)](https://crates.io/crates/rustytag)
+[![License](https://img.shields.io/crates/l/rustytag.svg)](LICENSE)
+
 </div>
 
 ## 特性
