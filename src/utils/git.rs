@@ -9,13 +9,16 @@ use std::path::Path;
 use super::file::create_gitignore;
 use super::project::ProjectFile;
 
-//! Git 操作相关功能模块
-//! 
-//! 本模块提供了与 Git 仓库交互的核心功能，包括：
-//! - 标签管理
-//! - 版本控制
-//! - 仓库操作
+// Git 操作相关功能模块
+//
+// 本模块提供了与 Git 仓库交互的核心功能，包括：
+// - 标签管理
+// - 版本控制
+// - 仓库操作
 
+/// 初始化 Git 仓库
+///
+/// 此函数会在当前目录创建一个新的 Git 仓库，并设置基本的 .gitignore 文件
 pub fn initialize_git_repo() -> Result<()> {
     let repo = Repository::init(".")?;
     create_gitignore()?;
@@ -88,18 +91,25 @@ pub fn commit_changes(repo: &Repository, version: &Version) -> Result<()> {
 }
 
 /// 创建新的 Git 标签
-/// 
+///
 /// # 参数
-/// 
-/// * `tag_name` - 标签名称
-/// * `message` - 标签信息
-/// 
+///
+/// * `repo` - Git 仓库引用
+/// * `version` - 版本号
+///
 /// # 示例
-/// 
-/// ```rust
+///
+/// ```no_run
+/// use git2::Repository;
+/// use semver::Version;
 /// use rustytag::utils::git::create_tag;
-/// 
-/// let result = create_tag("v1.0.0", "Initial release");
+///
+/// # fn main() -> anyhow::Result<()> {
+/// let repo = Repository::open(".")?;
+/// let version = Version::new(1, 0, 0);
+/// create_tag(&repo, &version)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn create_tag(repo: &Repository, version: &Version) -> Result<()> {
     let obj = repo.head()?.peel_to_commit()?.into_object();
