@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use dirs::home_dir;
-use git2::{Commit, Remote, Repository};
+use git2::{Remote, Repository};
 use semver::Version;
 use std::fs;
 use std::path::Path;
@@ -36,7 +36,7 @@ pub fn initialize_git_repo() -> Result<()> {
 pub fn get_latest_tag() -> Result<String> {
     let repo = Repository::open(".")?;
     let tags = repo.tag_names(None)?;
-    
+
     // 如果没有标签，返回初始版本
     if tags.is_empty() {
         println!("⚠️ 没有找到任何标签，使用初始版本");

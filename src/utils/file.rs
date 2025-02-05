@@ -3,7 +3,6 @@ use chrono::Local;
 use semver::Version;
 use std::fs::OpenOptions;
 use std::io::Write;
-use git2::Repository;
 
 pub fn create_changelog(version: &Version) -> Result<()> {
     println!("🔄 开始生成 CHANGELOG...");

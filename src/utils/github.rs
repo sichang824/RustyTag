@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use chrono::Local;
 use semver::Version;
 use serde_json::json;
