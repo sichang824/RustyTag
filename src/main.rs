@@ -109,11 +109,39 @@ fn main() -> Result<()> {
                         get_latest_tag(&repo)?
                     };
 
-                    create_changelog(&version)?;
-                    commit_changes(&repo, &version)?;
-                    create_tag(&repo, &version)?;
-                    println!("\nℹ Run the following command to publish the release");
-                    println!("git push --follow-tags origin main\n");
+                    // 获取 changelog 内容
+                    let changelog = std::fs::read_to_string("CHANGELOG.md")?;
+                    let release_notes = changelog
+                        .split("\n\n")
+                        .find(|section| section.starts_with(&format!("### [{}]", version)))
+                        .unwrap_or("No changelog content");
+
+                    // 获取 GitHub token
+                    let token = std::env::var("GITHUB_TOKEN").context(
+                        "GITHUB_TOKEN environment variable not set. To create a GitHub token:\n\
+                         1. Visit https://github.com/settings/tokens\n\
+                         2. Click 'Generate new token' (classic)\n\
+                         3. Select the 'repo' scope\n\
+                         4. Generate and copy the token\n\
+                         5. Set it in your environment:\n\
+                            export GITHUB_TOKEN=your_token\n\
+                         Note: For permanent setup, add it to your shell profile (~/.bashrc, ~/.zshrc, etc.)"
+                    )?;
+
+                    // 获取仓库 URL
+                    let repo_url = utils::git::get_remote_url()?;
+
+                    // 创建 release
+                    tokio::runtime::Runtime::new()?.block_on(async {
+                        utils::github::create_release(
+                            &token,
+                            &repo_url,
+                            &version.to_string(),
+                            &format!("Release {}", version),
+                            release_notes,
+                        )
+                        .await
+                    })?;
                 }
                 _ => unreachable!(),
             }
