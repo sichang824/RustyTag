@@ -30,6 +30,7 @@ pub fn create_changelog(version: &Version) -> Result<()> {
         writeln!(file)?;
         writeln!(file, "All notable changes to this project will be documented in this file. See [Conventional Commits](https://www.conventionalcommits.org/) specification when making commits.")?;
         writeln!(file)?;
+        writeln!(file, "---")?;
     }
 
     // 获取远程仓库 URL 和上一个版本号
