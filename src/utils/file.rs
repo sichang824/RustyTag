@@ -3,6 +3,7 @@ use chrono::Local;
 use semver::Version;
 use std::fs::OpenOptions;
 use std::io::Write;
+use git2::Repository;
 
 pub fn create_changelog(version: &Version) -> Result<()> {
     println!("🔄 开始生成 CHANGELOG...");
@@ -35,7 +36,7 @@ pub fn create_changelog(version: &Version) -> Result<()> {
 
     // 获取远程仓库 URL 和上一个版本号
     let remote_url = crate::utils::git::get_remote_url()?;
-    let previous_version = crate::utils::git::get_previous_version()?;
+    let previous_version = crate::utils::git::get_latest_tag()?;
     println!("🔗 远程仓库 URL: {}", remote_url);
     println!("📌 上一个版本: {}", previous_version);
 

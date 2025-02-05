@@ -33,15 +33,28 @@ pub fn initialize_git_repo() -> Result<()> {
     Ok(())
 }
 
-pub fn get_latest_tag(repo: &Repository) -> Result<Version> {
-    // 获取最新的 tag
+pub fn get_latest_tag() -> Result<String> {
+    let repo = Repository::open(".")?;
     let tags = repo.tag_names(None)?;
+    
+    // 如果没有标签，返回初始版本
+    if tags.is_empty() {
+        println!("⚠️ 没有找到任何标签，使用初始版本");
+        return Ok("initial".to_string());
+    }
+
+    // 获取最新的有效版本标签
     let latest_tag = tags
         .iter()
         .filter_map(|t| t)
         .filter_map(|t| Version::parse(t).ok())
         .max()
-        .unwrap_or(Version::new(0, 1, 0));
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| {
+            println!("⚠️ 没有找到有效的版本标签，使用初始版本");
+            "initial".to_string()
+        });
+
     Ok(latest_tag)
 }
 
@@ -225,15 +238,23 @@ pub fn get_remote_url() -> Result<String> {
 
 pub fn get_previous_version() -> Result<String> {
     let repo = Repository::open(Path::new("."))?;
+    let tags = repo.tag_names(None)?;
 
-    // 直接使用 get_latest_tag 获取当前最新的 tag
-    let latest_version = get_latest_tag(&repo)?;
+    // 收集并排序所有有效的版本
+    let mut versions: Vec<Version> = tags
+        .iter()
+        .filter_map(|t| t)
+        .filter_map(|t| Version::parse(t).ok())
+        .collect();
+    versions.sort();
 
-    if latest_version == Version::new(0, 1, 0) {
-        Ok("initial".to_string())
-    } else {
-        Ok(latest_version.to_string())
+    // 如果没有标签或只有一个标签，返回 "initial"
+    if versions.len() <= 1 {
+        return Ok("initial".to_string());
     }
+
+    // 返回倒数第二个版本
+    Ok(versions[versions.len() - 2].to_string())
 }
 
 fn convert_ssh_to_https(url: &str) -> String {
@@ -256,7 +277,7 @@ pub struct ProjectInfo {
 }
 
 pub fn get_project_info(repo: &Repository) -> Result<ProjectInfo> {
-    let version = get_latest_tag(repo)?.to_string();
+    let version = get_latest_tag()?;
     let repo_url = get_remote_url().ok();
 
     // 获取提交数量

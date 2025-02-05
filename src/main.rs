@@ -12,7 +12,7 @@ use utils::{
         add_project_files, commit_changes, create_tag, get_latest_tag, get_project_info,
         initialize_git_repo, reset_tags,
     },
-    version::{bump_version, update_version_to_project, BumpType},
+    version::{bump_version, get_latest_version, update_version_to_project, BumpType},
 };
 
 #[derive(Parser)]
@@ -87,7 +87,7 @@ fn main() -> Result<()> {
             let repo = Repository::open(".").context("Failed to open Git repository")?;
             match cli.command {
                 Commands::Patch | Commands::Minor | Commands::Major => {
-                    let latest_tag = get_latest_tag(&repo)?;
+                    let latest_tag = get_latest_version()?;
                     let new_version = match cli.command {
                         Commands::Patch => bump_version(&latest_tag, BumpType::Patch),
                         Commands::Minor => bump_version(&latest_tag, BumpType::Minor),
@@ -112,7 +112,7 @@ fn main() -> Result<()> {
                     let version = if let Some(tag_str) = tag {
                         Version::parse(&tag_str).context("Invalid version format")?
                     } else {
-                        get_latest_tag(&repo)?
+                        get_latest_version()?
                     };
                     tokio::runtime::Runtime::new()?
                         .block_on(async { utils::github::create_github_release(&version).await })?;
