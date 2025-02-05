@@ -284,7 +284,7 @@ pub fn get_commits_between_tags(from_tag: &str, to_tag: &str) -> Result<Vec<GitC
     let repo = Repository::open(".")?;
     let mut commits = Vec::new();
 
-    // 获取两个 tag 对应的 commit
+    // 获取两个 tag 对应的 commit，不再添加 'v' 前缀
     let from_obj = repo.revparse_single(from_tag)?;
     let to_obj = repo.revparse_single(to_tag)?;
 

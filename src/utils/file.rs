@@ -42,7 +42,7 @@ pub fn create_changelog(version: &Version) -> Result<()> {
     if previous_version == "initial" {
         writeln!(
             file,
-            "### [{}]({}/commits/v{}) ({})",
+            "### [{}]({}/commits/{}) ({})",
             version,
             remote_url.trim_end_matches(".git"),
             version,
@@ -51,7 +51,7 @@ pub fn create_changelog(version: &Version) -> Result<()> {
     } else {
         writeln!(
             file,
-            "### [{}]({}/compare/v{}...v{}) ({})",
+            "### [{}]({}/compare/{}...{}) ({})",
             version,
             remote_url.trim_end_matches(".git"),
             previous_version,
@@ -69,8 +69,8 @@ pub fn create_changelog(version: &Version) -> Result<()> {
     } else {
         println!("📊 获取从 v{} 到 v{} 之间的提交", previous_version, version);
         crate::utils::git::get_commits_between_tags(
-            &format!("v{}", previous_version),
-            &format!("v{}", version),
+            &format!("{}", previous_version),
+            &format!("{}", version),
         )?
     };
     println!("✅ 获取到 {} 条提交记录", commits.len());
