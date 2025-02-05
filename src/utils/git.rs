@@ -3,6 +3,7 @@ use dirs::home_dir;
 use git2::{Remote, Repository};
 use semver::Version;
 use std::fs;
+use std::io::Write;
 use std::path::Path;
 
 use super::file::create_gitignore;
@@ -320,4 +321,174 @@ pub fn get_commits_after_tag(tag: &str) -> Result<Vec<GitCommit>> {
     }
 
     Ok(commits)
+}
+
+/// 获取本地所有标签
+pub fn get_local_tags(repo: &Repository) -> Result<Vec<String>> {
+    let tags = repo.tag_names(None)?;
+    Ok(tags
+        .iter()
+        .filter_map(|tag| tag.map(|s| s.to_string()))
+        .collect())
+}
+
+/// 创建 Git 认证回调
+fn create_callbacks() -> git2::RemoteCallbacks<'static> {
+    let mut callbacks = git2::RemoteCallbacks::new();
+    callbacks.credentials(|_url, username_from_url, _allowed_types| {
+        let home_dir =
+            home_dir().ok_or_else(|| git2::Error::from_str("Cannot get home directory"))?;
+        let private_key_path = home_dir.join(".ssh/keys/privite/github");
+        git2::Cred::ssh_key(
+            username_from_url.unwrap_or("git"),
+            None,
+            &private_key_path,
+            None,
+        )
+    });
+    callbacks
+}
+
+/// 获取远程所有标签
+pub fn get_remote_tags(repo: &Repository) -> Result<Vec<String>> {
+    let mut remote = repo.find_remote("origin")?;
+
+    // 设置认证回调
+    let callbacks = create_callbacks();
+    remote.connect_auth(git2::Direction::Fetch, Some(callbacks), None)?;
+    let remote_list = remote.list()?;
+
+    let tags: Vec<String> = remote_list
+        .iter()
+        .filter(|r| r.name().starts_with("refs/tags/"))
+        .map(|r| r.name().trim_start_matches("refs/tags/").to_string())
+        .filter(|name| !name.ends_with("^{}")) // 过滤掉注释标签
+        .collect();
+
+    remote.disconnect()?;
+    Ok(tags)
+}
+
+/// 标签同步状态
+#[derive(Debug)]
+pub struct TagSyncStatus {
+    pub all_tags: Vec<String>,
+    pub to_push: Vec<String>,
+    pub to_pull: Vec<String>,
+}
+
+/// 比较本地和远程标签
+pub fn compare_tags(repo: &Repository) -> Result<TagSyncStatus> {
+    let local_tags = get_local_tags(repo)?;
+    let remote_tags = get_remote_tags(repo)?;
+
+    let mut all_tags: Vec<String> = local_tags.clone();
+    all_tags.extend(remote_tags.clone());
+    all_tags.sort();
+    all_tags.dedup();
+
+    let to_push: Vec<String> = local_tags
+        .iter()
+        .filter(|tag| !remote_tags.contains(tag))
+        .cloned()
+        .collect();
+
+    let to_pull: Vec<String> = remote_tags
+        .iter()
+        .filter(|tag| !local_tags.contains(tag))
+        .cloned()
+        .collect();
+
+    Ok(TagSyncStatus {
+        all_tags,
+        to_push,
+        to_pull,
+    })
+}
+
+fn display_sync_status(status: &TagSyncStatus) -> bool {
+    println!("📊 Tag Comparison");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+    let mut has_differences = false;
+    for tag in &status.all_tags {
+        let in_local = !status.to_pull.contains(tag);
+        let in_remote = !status.to_push.contains(tag);
+        let status_icon = match (in_local, in_remote) {
+            (true, true) => "✅",
+            (true, false) => "📤",
+            (false, true) => "📥",
+            (false, false) => unreachable!(),
+        };
+        let status_text = match (in_local, in_remote) {
+            (true, true) => "(synced)",
+            (true, false) => "(local only)",
+            (false, true) => "(remote only)",
+            (false, false) => unreachable!(),
+        };
+        println!("{} {} {}", status_icon, tag, status_text);
+        if in_local != in_remote {
+            has_differences = true;
+        }
+    }
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Legend:");
+    println!("✅ Synced   📤 Local only   📥 Remote only\n");
+
+    has_differences
+}
+
+fn pull_tags(remote: &mut Remote, tags: &[String]) -> Result<()> {
+    if tags.is_empty() {
+        return Ok(());
+    }
+
+    println!("🔄 Fetching remote tags...");
+    let mut fetch_options = git2::FetchOptions::new();
+    fetch_options.remote_callbacks(create_callbacks());
+    fetch_options.download_tags(git2::AutotagOption::All);
+    remote.fetch(&["refs/tags/*:refs/tags/*"], Some(&mut fetch_options), None)?;
+    println!("✨ Successfully fetched {} remote tags", tags.len());
+    Ok(())
+}
+
+fn push_tags(remote: &mut Remote, tags: &[String]) -> Result<()> {
+    if tags.is_empty() {
+        return Ok(());
+    }
+    let mut push_options = git2::PushOptions::new();
+    push_options.remote_callbacks(create_callbacks());
+
+    let total = tags.len();
+    for (index, tag) in tags.iter().enumerate() {
+        print!("\r🏷️  Pushing tag ({}/{}) {}", index + 1, total, tag);
+        std::io::stdout().flush()?;
+        let refspec = format!("refs/tags/{}:refs/tags/{}", tag, tag);
+        remote.push(&[&refspec], Some(&mut push_options))?;
+    }
+    println!("\n✨ Successfully pushed {} local tags!", total);
+    Ok(())
+}
+
+pub fn show_and_sync_tags(repo: &Repository) -> Result<()> {
+    let sync_status = compare_tags(repo)?;
+    let has_differences = display_sync_status(&sync_status);
+    if !has_differences {
+        println!("✨ All tags are already in sync!");
+        return Ok(());
+    }
+    print!("🔄 Do you want to sync these tags? [y/N] ");
+    std::io::stdout().flush()?;
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+    if input.trim().to_lowercase() == "y" {
+        println!("\n🔄 Syncing tags with remote...");
+        let mut remote = get_remote(repo)?;
+        pull_tags(&mut remote, &sync_status.to_pull)?;
+        push_tags(&mut remote, &sync_status.to_push)?;
+        println!("✨ Successfully synced all tags!\n");
+    } else {
+        println!("❌ Sync cancelled");
+    }
+    Ok(())
 }

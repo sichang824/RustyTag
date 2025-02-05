@@ -11,7 +11,7 @@ use utils::{
     file::create_changelog,
     git::{
         add_project_files, commit_changes, create_tag, get_project_info, initialize_git_repo,
-        reset_tags,
+        reset_tags, show_and_sync_tags,
     },
     version::{bump_version, get_latest_version, update_version_to_project, BumpType},
 };
@@ -46,6 +46,8 @@ enum Commands {
         #[arg(short = 'l', long = "list", alias = "ls")]
         list: bool,
     },
+    /// Sync local tags with remote
+    Sync,
     /// Configure RustyTag settings
     Config {
         /// Set a configuration value (e.g., GITHUB_TOKEN=xxx)
@@ -140,6 +142,9 @@ fn main() -> Result<()> {
                             println!("❌ Release cancelled");
                         }
                     }
+                }
+                Commands::Sync => {
+                    utils::git::show_and_sync_tags(&repo)?;
                 }
                 Commands::Config { set } => {
                     utils::config::handle_config_command(set)?;
