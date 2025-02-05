@@ -175,8 +175,10 @@ fn fetch_remote_tags(remote: &mut Remote) -> Result<Vec<String>> {
 
     for head in connection.list()?.iter() {
         if let Some(tag_name) = head.name().strip_prefix("refs/tags/") {
-            println!("🏷️ 发现远程 tag: {}", tag_name);
-            remote_tags.push(tag_name.to_string());
+            if !tag_name.ends_with("^{}") {
+                println!("🏷️ 发现远程 tag: {}", tag_name);
+                remote_tags.push(tag_name.to_string());
+            }
         }
     }
 
