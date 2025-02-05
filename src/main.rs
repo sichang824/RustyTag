@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use git2::Repository;
 use semver::Version;
+use std::io::{self, Write};
 use std::path::Path;
 
 mod utils;
@@ -36,11 +37,14 @@ enum Commands {
     Reset,
     /// Show current version information
     Show,
-    /// Create a release with changelog
+    /// Create or list releases
     Release {
         /// Specify a tag version to release
         #[arg(short, long)]
         tag: Option<String>,
+        /// List all releases
+        #[arg(short = 'l', long = "list", alias = "ls")]
+        list: bool,
     },
     /// Configure RustyTag settings
     Config {
@@ -52,22 +56,22 @@ enum Commands {
 
 fn show_project_info(repo: &Repository) -> Result<()> {
     let info = get_project_info(repo)?;
-    println!("\n📦 项目信息");
+    println!("\n📦 Project Information");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!("🏷️  当前版本: {}", info.version);
+    println!("🏷️  Current Version: {}", info.version);
     if let Some(branch) = info.branch_name {
-        println!("🌿 当前分支: {}", branch);
+        println!("🌿 Current Branch: {}", branch);
     }
-    println!("📝 提交数量: {}", info.commit_count);
+    println!("📝 Commit Count: {}", info.commit_count);
     if let Some(url) = info.repo_url {
-        println!("🔗 仓库地址: {}", url);
+        println!("🔗 Repository URL: {}", url);
     }
-    println!("\n🛠️  RustyTag 信息");
+    println!("\n🛠️  RustyTag Information");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!("📋 版本: {}", env!("CARGO_PKG_VERSION"));
-    println!("📘 描述: A Git tag and version management tool");
-    println!("🏠 主页: https://github.com/sichang824/rustytag");
-    println!("👤 作者: sichang <sichang824@gmail.com>");
+    println!("📋 Version: {}", env!("CARGO_PKG_VERSION"));
+    println!("📘 Description: A Git tag and version management tool");
+    println!("🏠 Homepage: https://github.com/sichang824/rustytag");
+    println!("👤 Author: sichang <sichang824@gmail.com>");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
     Ok(())
 }
@@ -108,14 +112,34 @@ fn main() -> Result<()> {
                 Commands::Show => {
                     show_project_info(&repo)?;
                 }
-                Commands::Release { tag } => {
-                    let version = if let Some(tag_str) = tag {
-                        Version::parse(&tag_str).context("Invalid version format")?
+                Commands::Release { tag, list } => {
+                    if list {
+                        tokio::runtime::Runtime::new()?
+                            .block_on(async { utils::github::list_github_releases().await })?;
                     } else {
-                        get_latest_version()?
-                    };
-                    tokio::runtime::Runtime::new()?
-                        .block_on(async { utils::github::create_github_release(&version).await })?;
+                        let version = if let Some(tag_str) = tag {
+                            Version::parse(&tag_str).context("Invalid version format")?
+                        } else {
+                            get_latest_version()?
+                        };
+
+                        print!(
+                            "\n🚀 Are you sure you want to create release {}? [y/N] ",
+                            version
+                        );
+                        io::stdout().flush()?;
+
+                        let mut input = String::new();
+                        io::stdin().read_line(&mut input)?;
+
+                        if input.trim().to_lowercase() == "y" {
+                            tokio::runtime::Runtime::new()?.block_on(async {
+                                utils::github::create_github_release(&version).await
+                            })?;
+                        } else {
+                            println!("❌ Release cancelled");
+                        }
+                    }
                 }
                 Commands::Config { set } => {
                     utils::config::handle_config_command(set)?;

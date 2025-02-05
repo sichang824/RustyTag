@@ -67,20 +67,17 @@ rustytag reset
 # Show project information
 rustytag show
 
-# List all tags
+# List all release add release link
 rustytag list
 
 # Show tag details
 rustytag show v1.0.0
 
-# Compare tag with previous version
-rustytag show v1.0.0 --compare
-
-# Show full commit history for a tag
-rustytag show v1.0.0 --full
-
 # Create a release with changelog
 rustytag release
+
+# Set config
+rustytag config --set XXXX=xxx
 ```
 
 ## Contributing

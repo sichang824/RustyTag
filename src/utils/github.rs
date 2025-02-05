@@ -199,6 +199,57 @@ impl GitHubClient {
             ))
         }
     }
+
+    /// 获取所有发布版本
+    pub async fn list_releases(&self) -> Result<()> {
+        let parts: Vec<&str> = self.repo_url.trim_end_matches(".git").split('/').collect();
+        let owner = parts[parts.len() - 2];
+        let repo = parts[parts.len() - 1];
+
+        let client = reqwest::Client::new();
+        let url = format!("https://api.github.com/repos/{}/{}/releases", owner, repo);
+
+        let response = client
+            .get(&url)
+            .header("Accept", "application/vnd.github.v3+json")
+            .header("Authorization", format!("token {}", self.token))
+            .header("User-Agent", "RustyTag")
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!(
+                "Failed to fetch releases: {}",
+                response.text().await?
+            ));
+        }
+
+        let releases: Vec<serde_json::Value> = response.json().await?;
+
+        if releases.is_empty() {
+            println!("No releases found.");
+            return Ok(());
+        }
+
+        println!("\n📋 Release List");
+        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+        for release in releases {
+            let tag_name = release["tag_name"].as_str().unwrap_or("Unknown version");
+            let created_at = release["created_at"]
+                .as_str()
+                .unwrap_or("")
+                .split('T')
+                .next()
+                .unwrap_or("");
+            let html_url = release["html_url"].as_str().unwrap_or("");
+
+            println!("🏷️  {} ({}) -> {}", tag_name, created_at, html_url);
+        }
+
+        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+        Ok(())
+    }
 }
 
 /// 创建 GitHub Release 的便捷函数
@@ -208,4 +259,13 @@ pub async fn create_github_release(version: &Version) -> Result<()> {
 
     let client = GitHubClient::new(token, repo_url);
     client.create_release(version).await
+}
+
+/// 列出所有 GitHub Release 的便捷函数
+pub async fn list_github_releases() -> Result<()> {
+    let token = GitHubClient::from_env_or_config()?;
+    let repo_url = crate::utils::git::get_remote_url()?;
+
+    let client = GitHubClient::new(token, repo_url);
+    client.list_releases().await
 }

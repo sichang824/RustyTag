@@ -238,27 +238,6 @@ pub fn get_remote_url() -> Result<String> {
     Ok(convert_ssh_to_https(url))
 }
 
-pub fn get_previous_tag() -> Result<String> {
-    let repo = Repository::open(Path::new("."))?;
-    let tags = repo.tag_names(None)?;
-
-    // 收集并排序所有有效的版本
-    let mut versions: Vec<Version> = tags
-        .iter()
-        .filter_map(|t| t)
-        .filter_map(|t| Version::parse(t).ok())
-        .collect();
-    versions.sort();
-
-    // 如果没有标签或只有一个标签，返回 "initial"
-    if versions.len() <= 1 {
-        return Ok("initial".to_string());
-    }
-
-    // 返回倒数第二个版本
-    Ok(versions[versions.len() - 2].to_string())
-}
-
 fn convert_ssh_to_https(url: &str) -> String {
     if url.starts_with("git@") {
         // 转换 git@github.com:user/repo.git 为 https://github.com/user/repo
