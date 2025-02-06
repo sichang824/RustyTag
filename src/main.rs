@@ -25,30 +25,30 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Initialize a new git repository
+    /// Initialize a new Git repository
     Init,
-    /// Bump patch version (e.g., 1.0.0 -> 1.0.1)
+    /// Bump patch version (e.g., 1.0.0 → 1.0.1)
     Patch,
-    /// Bump minor version (e.g., 1.0.0 -> 1.1.0)
+    /// Bump minor version (e.g., 1.0.0 → 1.1.0)
     Minor,
-    /// Bump major version (e.g., 1.0.0 -> 2.0.0)
+    /// Bump major version (e.g., 1.0.0 → 2.0.0)
     Major,
-    /// Reset local tags to match remote
+    /// Reset local tags to match the remote repository
     Reset,
-    /// Show current version information
+    /// Show the current version
     Show,
     /// Create or list releases
     Release {
-        /// Specify a tag version to release
-        #[arg(short, long)]
-        tag: Option<String>,
-        /// List all releases
-        #[arg(short = 'l', long = "list")]
+        /// List all available releases
+        #[arg(short = 'l', long)]
         list: bool,
+        /// Create a release for the specified version
+        #[arg(short = 't', long)]
+        tag: Option<String>,
     },
-    /// Sync local tags with remote
+    /// Synchronize local tags with the remote repository
     Sync,
-    /// Configure RustyTag settings
+    /// Manage RustyTag configuration settings
     Config {
         /// Set a configuration value (e.g., GITHUB_TOKEN=xxx)
         #[arg(short, long)]
@@ -146,7 +146,7 @@ fn main() -> Result<()> {
                 Commands::Sync => {
                     utils::git::show_and_sync_tags(&repo)?;
                 }
-                Commands::Config { set } => {
+                Commands::Config { set, .. } => {
                     utils::config::handle_config_command(set)?;
                 }
                 _ => unreachable!(),

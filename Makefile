@@ -7,6 +7,9 @@ all: check build test
 build:
 	cargo build --release
 
+run:
+	cargo run -- $(word 2,$(MAKECMDGOALS))
+
 # 运行测试
 test:
 	cargo test --all-features
@@ -40,3 +43,9 @@ install:
 # 开发模式构建
 dev:
 	cargo build
+
+.PHONY: run
+DEFAULT_GOAL: help
+
+%:
+	@:
