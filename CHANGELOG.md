@@ -11,9 +11,9 @@
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://www.conventionalcommits.org/) specification when making commits.
 
 ---
-### [1.0.12](https://github.com/sichang824/RustyTag/compare/1.0.11...1.0.12) (2025-02-07)
+### [1.0.13](https://github.com/sichang824/RustyTag/compare/1.0.12...1.0.13) (2025-02-07)
 
 ### Commits
 
-* Fixes OpenSSL configuration for macOS builds ([c318701](https://github.com/sichang824/RustyTag/commit/c3187017002b807a771e234e7ed1892450a43614))
+* Adds required GitHub Actions permissions ([ed749d8](https://github.com/sichang824/RustyTag/commit/ed749d81ffde78633ab890a31630924b436572e4))
 
