@@ -4,6 +4,10 @@ on:
   release:
     types: [created]
 
+permissions:
+  contents: write
+  packages: write
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -12,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      packages: write
     outputs:
       upload_url: ${{ github.event.release.upload_url }}
     steps:
@@ -22,6 +27,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
+      packages: write
     env:
       VERSION: ${{ github.event.release.tag_name }}
     strategy:
