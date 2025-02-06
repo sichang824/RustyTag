@@ -74,6 +74,7 @@ rustytag release -t v1.0.0  # 为指定版本创建发布
 rustytag release --tag v1.0.0  # 为指定版本创建发布
 
 # 配置管理
+rustytag config  # 显示当前配置信息
 rustytag config --set KEY=VALUE  # 设置配置项
 ```
 
@@ -85,7 +86,7 @@ rustytag config --set KEY=VALUE  # 设置配置项
 - `reset`: 将本地标签重置为与远程仓库一致
 - `show`: 显示版本信息
 - `release`: 管理发布
-- `config`: 配置 RustyTag 设置
+- `config`: 配置 RustyTag 设置，不带参数时显示当前配置信息
 
 ## 贡献
 

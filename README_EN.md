@@ -70,6 +70,7 @@ rustytag release -t v1.0.0  # Create a release for specific version
 rustytag release --tag v1.0.0  # Create a release for specific version
 
 # Configuration
+rustytag config  # Show current configuration
 rustytag config --set KEY=VALUE  # Set configuration
 ```
 
@@ -81,7 +82,7 @@ rustytag config --set KEY=VALUE  # Set configuration
 - `reset`: Reset local tags to match remote repository
 - `show`: Display version information
 - `release`: Manage releases
-- `config`: Configure RustyTag settings
+- `config`: Configure RustyTag settings, shows current configuration when used without parameters
 
 ## Contributing
 
