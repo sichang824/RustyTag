@@ -64,7 +64,10 @@ rustytag show v1.0.0  # Show specific tag details
 
 # Release management
 rustytag release  # Create a release
-rustytag release list  # List all releases
+rustytag release -l  # List all releases
+rustytag release --list  # List all releases
+rustytag release -t v1.0.0  # Create a release for specific version
+rustytag release --tag v1.0.0  # Create a release for specific version
 
 # Configuration
 rustytag config --set KEY=VALUE  # Set configuration

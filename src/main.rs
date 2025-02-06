@@ -43,7 +43,7 @@ enum Commands {
         #[arg(short, long)]
         tag: Option<String>,
         /// List all releases
-        #[arg(short = 'l', long = "list", alias = "ls")]
+        #[arg(short = 'l', long = "list")]
         list: bool,
     },
     /// Sync local tags with remote

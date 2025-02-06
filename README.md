@@ -68,7 +68,10 @@ rustytag show v1.0.0  # 显示特定标签详情
 
 # 发布管理
 rustytag release  # 创建发布
-rustytag release list  # 列出所有发布
+rustytag release -l  # 列出所有发布
+rustytag release --list  # 列出所有发布
+rustytag release -t v1.0.0  # 为指定版本创建发布
+rustytag release --tag v1.0.0  # 为指定版本创建发布
 
 # 配置管理
 rustytag config --set KEY=VALUE  # 设置配置项
