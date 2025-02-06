@@ -1,6 +1,6 @@
 [package]
 name = "rustytag"
-version = "1.0.14"
+version = "1.0.15"
 edition = "2021"
 description = "A semantic version management tool built on Git tags."
 authors = ["sichang <zhaoanke@163.com>"]
