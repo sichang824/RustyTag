@@ -542,7 +542,11 @@
 <a href="#541" id="541">541</a>
 <a href="#542" id="542">542</a>
 <a href="#543" id="543">543</a>
-<a href="#544" id="544">544</a></pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a></pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>dirs::home_dir;
 <span class="kw">use </span>git2::{Remote, Repository};
 <span class="kw">use </span>std::fs;
@@ -620,7 +624,10 @@
         <span class="kw">if </span>config.version_prefix.is_none() {
             config.version_prefix = <span class="prelude-val">Some</span>(latest_version.prefix.clone());
             config.save()<span class="question-mark">?</span>;
-            <span class="macro">println!</span>(<span class="string">"✨ Version prefix auto-configured: {}"</span>, latest_version.prefix);
+            <span class="macro">println!</span>(
+                <span class="string">"✨ Version prefix auto-configured: {}"</span>,
+                latest_version.prefix
+            );
         }
     }
 
@@ -659,12 +666,12 @@
 ///
 /// ```no_run
 /// use git2::Repository;
-/// use version::Version;
+/// use rustytag::utils::version::Version;
 /// use rustytag::utils::git::create_tag;
 ///
 /// # fn main() -&gt; anyhow::Result&lt;()&gt; {
 /// let repo = Repository::open(".")?;
-/// let version = Version::new(1, 0, 0);
+/// let version = Version::new(semver::Version::new(1, 0, 0));
 /// create_tag(&amp;repo, &amp;version)?;
 /// # Ok(())
 /// # }
@@ -739,7 +746,8 @@
     </span><span class="kw">let </span>create_callbacks = || {
         <span class="kw">let </span><span class="kw-2">mut </span>callbacks = git2::RemoteCallbacks::new();
         callbacks.credentials(|_url, username_from_url, _allowed_types| {
-            <span class="kw">let </span>home_dir = home_dir().ok_or_else(|| git2::Error::from_str(<span class="string">"Cannot get home directory"</span>))<span class="question-mark">?</span>;
+            <span class="kw">let </span>home_dir =
+                home_dir().ok_or_else(|| git2::Error::from_str(<span class="string">"Cannot get home directory"</span>))<span class="question-mark">?</span>;
             <span class="kw">let </span>private_key_path = home_dir.join(<span class="string">".ssh/keys/privite/github"</span>);
             git2::Cred::ssh_key(
                 username_from_url.unwrap_or(<span class="string">"git"</span>),
