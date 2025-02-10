@@ -269,9 +269,9 @@
 <a href="#268" id="268">268</a>
 <a href="#269" id="269">269</a>
 <a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a></pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::Result;
+<a href="#271" id="271">271</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::version::Version;
+<span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>chrono::Local;
-<span class="kw">use </span>semver::Version;
 <span class="kw">use </span>serde_json::json;
 
 <span class="kw">pub struct </span>GitHubClient {
@@ -289,7 +289,7 @@
         <span class="kw">if let </span><span class="prelude-val">Ok</span>(token) = std::env::var(<span class="string">"GITHUB_TOKEN"</span>) {
             <span class="prelude-val">Ok</span>(token)
         } <span class="kw">else </span>{
-            <span class="kw">let </span>config = <span class="kw">crate</span>::utils::config::Config::load()<span class="question-mark">?</span>;
+            <span class="kw">let </span>config = <span class="kw">crate</span>::utils::config::GlobalConfig::load()<span class="question-mark">?</span>;
             config.github_token.ok_or_else(|| {
                 <span class="macro">anyhow::anyhow!</span>(
                     <span class="string">"GitHub token not found. To set it up:\n\

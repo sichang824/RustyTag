@@ -110,25 +110,30 @@
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a></pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::Result;
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a></pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>chrono::Local;
-<span class="kw">use </span>semver::Version;
 <span class="kw">use </span>std::fs::OpenOptions;
 <span class="kw">use </span>std::io::Write;
 
+<span class="kw">use </span><span class="kw">super</span>::version::Version;
+
 <span class="kw">pub fn </span>create_changelog(version: <span class="kw-2">&amp;</span>Version) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-    <span class="macro">println!</span>(<span class="string">"🔄 开始生成 CHANGELOG..."</span>);
+    <span class="macro">println!</span>(<span class="string">"🔄 Generating CHANGELOG..."</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>file = OpenOptions::new()
         .write(<span class="bool-val">true</span>)
         .create(<span class="bool-val">true</span>)
         .truncate(<span class="bool-val">true</span>)
         .open(<span class="string">"CHANGELOG.md"</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// 获取当前日期
+    <span class="comment">// Get current date
     </span><span class="kw">let </span>date = Local::now().format(<span class="string">"%Y-%m-%d"</span>).to_string();
-    <span class="macro">println!</span>(<span class="string">"📅 当前日期: {}"</span>, date);
+    <span class="macro">println!</span>(<span class="string">"📅 Current date: {}"</span>, date);
 
-    <span class="comment">// 如果文件为空，写入标准头部
+    <span class="comment">// If file is empty, write standard header
     </span><span class="kw">if </span>file.metadata()<span class="question-mark">?</span>.len() == <span class="number">0 </span>{
         <span class="macro">writeln!</span>(file, <span class="string">"# Changelog"</span>)<span class="question-mark">?</span>;
         <span class="macro">writeln!</span>(file)<span class="question-mark">?</span>;
@@ -145,14 +150,17 @@
         <span class="macro">writeln!</span>(file, <span class="string">"---"</span>)<span class="question-mark">?</span>;
     }
 
-    <span class="comment">// 获取远程仓库 URL 和上一个版本号
+    <span class="comment">// Get remote repository URL and previous version
     </span><span class="kw">let </span>remote_url = <span class="kw">crate</span>::utils::git::get_remote_url()<span class="question-mark">?</span>;
     <span class="kw">let </span>previous_version = <span class="kw">crate</span>::utils::git::get_latest_tag()<span class="question-mark">?</span>;
-    <span class="macro">println!</span>(<span class="string">"🔗 远程仓库 URL: {}"</span>, remote_url);
-    <span class="macro">println!</span>(<span class="string">"📌 上一个版本: {}"</span>, previous_version);
+    <span class="macro">println!</span>(<span class="string">"🔗 Remote repository URL: {}"</span>, remote_url);
+    <span class="macro">println!</span>(<span class="string">"📌 Previous version: {}"</span>, previous_version);
 
-    <span class="comment">// 写入版本标题和对比链接
-    </span><span class="kw">if </span>previous_version == <span class="string">"initial" </span>{
+    <span class="comment">// Write version title and comparison link
+    </span><span class="kw">let </span>initial_version =
+        Version::new(semver::Version::new(<span class="number">0</span>, <span class="number">1</span>, <span class="number">0</span>)).with_prefix(previous_version.prefix.clone());
+
+    <span class="kw">if </span>previous_version.version == initial_version.version {
         <span class="macro">writeln!</span>(
             file,
             <span class="string">"### [{}]({}/commits/{}) ({})"</span>,
@@ -174,22 +182,22 @@
     }
     <span class="macro">writeln!</span>(file)<span class="question-mark">?</span>;
 
-    <span class="comment">// 获取提交记录
-    </span><span class="macro">println!</span>(<span class="string">"🔍 获取提交记录..."</span>);
-    <span class="kw">let </span>commits = <span class="kw">if </span>previous_version == <span class="string">"initial" </span>{
-        <span class="macro">println!</span>(<span class="string">"⚠️ 未找到上一个版本，获取所有提交"</span>);
+    <span class="comment">// Get commit history
+    </span><span class="macro">println!</span>(<span class="string">"🔍 Getting commit history..."</span>);
+    <span class="kw">let </span>commits = <span class="kw">if </span>previous_version.version == initial_version.version {
+        <span class="macro">println!</span>(<span class="string">"⚠️ No previous version found, getting all commits"</span>);
         <span class="kw">crate</span>::utils::git::get_git_commits()<span class="question-mark">?
     </span>} <span class="kw">else </span>{
-        <span class="macro">println!</span>(<span class="string">"📊 获取 {} 之后的新提交"</span>, previous_version);
-        <span class="kw">crate</span>::utils::git::get_commits_after_tag(<span class="kw-2">&amp;</span>previous_version)<span class="question-mark">?
+        <span class="macro">println!</span>(<span class="string">"📊 Getting new commits after {}"</span>, previous_version);
+        <span class="kw">crate</span>::utils::git::get_commits_after_tag(<span class="kw-2">&amp;</span>previous_version.to_string())<span class="question-mark">?
     </span>};
-    <span class="macro">println!</span>(<span class="string">"✅ 获取到 {} 条提交记录"</span>, commits.len());
+    <span class="macro">println!</span>(<span class="string">"✅ Found {} commits"</span>, commits.len());
 
-    <span class="comment">// 写入所有提交
+    <span class="comment">// Write all commits
     </span><span class="macro">writeln!</span>(file, <span class="string">"### Commits"</span>)<span class="question-mark">?</span>;
     <span class="macro">writeln!</span>(file)<span class="question-mark">?</span>;
     <span class="kw">for </span>commit <span class="kw">in </span><span class="kw-2">&amp;</span>commits {
-        <span class="comment">// 跳过 "chore: release" 提交
+        <span class="comment">// Skip "chore: release" commits
         </span><span class="kw">if </span>commit.message.starts_with(<span class="string">"chore: release"</span>) {
             <span class="kw">continue</span>;
         }
@@ -204,7 +212,7 @@
     }
     <span class="macro">writeln!</span>(file)<span class="question-mark">?</span>;
 
-    <span class="macro">println!</span>(<span class="string">"✨ CHANGELOG.md 生成完成"</span>);
+    <span class="macro">println!</span>(<span class="string">"✨ CHANGELOG.md generated successfully"</span>);
     <span class="prelude-val">Ok</span>(())
 }
 

@@ -109,115 +109,141 @@
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a></pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::Result;
-<span class="kw">use </span>dirs::home_dir;
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a></pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>std::fs;
 <span class="kw">use </span>std::path::PathBuf;
-<span class="kw">use </span>std::str::FromStr;
 
 <span class="attr">#[derive(Debug, Serialize, Deserialize, Default)]
-</span><span class="kw">pub struct </span>Config {
+</span><span class="kw">pub struct </span>GlobalConfig {
     <span class="kw">pub </span>github_token: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
-<span class="attr">#[derive(Debug)]
-</span><span class="kw">pub enum </span>ConfigKey {
-    GithubToken,
+<span class="attr">#[derive(Debug, Serialize, Deserialize, Default)]
+</span><span class="kw">pub struct </span>LocalConfig {
+    <span class="kw">pub </span>version_prefix: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
-<span class="kw">impl </span>FromStr <span class="kw">for </span>ConfigKey {
-    <span class="kw">type </span><span class="prelude-val">Err </span>= anyhow::Error;
-
-    <span class="kw">fn </span>from_str(key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
-        <span class="kw">match </span>key {
-            <span class="string">"GITHUB_TOKEN" </span>=&gt; <span class="prelude-val">Ok</span>(ConfigKey::GithubToken),
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"Unknown configuration key: {}"</span>, key)),
-        }
+<span class="kw">impl </span>GlobalConfig {
+    <span class="kw">fn </span>config_path() -&gt; PathBuf {
+        dirs::home_dir()
+            .unwrap_or_else(|| PathBuf::from(<span class="string">"~"</span>))
+            .join(<span class="string">".rustytag/config.json"</span>)
     }
-}
 
-<span class="kw">impl </span>ConfigKey {
-    <span class="kw">fn </span>as_str(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
-        <span class="kw">match </span><span class="self">self </span>{
-            ConfigKey::GithubToken =&gt; <span class="string">"GITHUB_TOKEN"</span>,
-        }
-    }
-}
-
-<span class="kw">impl </span>Config {
     <span class="kw">pub fn </span>load() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>config_path = get_config_path()<span class="question-mark">?</span>;
-        <span class="kw">if </span>!config_path.exists() {
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(Config::default());
+        <span class="kw">let </span>path = <span class="self">Self</span>::config_path();
+        <span class="kw">if </span>!path.exists() {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">Self</span>::default());
         }
-        <span class="kw">let </span>content = fs::read_to_string(config_path)<span class="question-mark">?</span>;
+        <span class="kw">let </span>content = fs::read_to_string(path)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(serde_json::from_str(<span class="kw-2">&amp;</span>content)<span class="question-mark">?</span>)
     }
 
     <span class="kw">pub fn </span>save(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="kw">let </span>config_path = get_config_path()<span class="question-mark">?</span>;
-        <span class="comment">// 确保配置目录存在
-        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(parent) = config_path.parent() {
-            fs::create_dir_all(parent)<span class="question-mark">?</span>;
-        }
-        <span class="kw">let </span>content = serde_json::to_string_pretty(<span class="self">self</span>)<span class="question-mark">?</span>;
-        fs::write(config_path, content)<span class="question-mark">?</span>;
+        <span class="kw">let </span>path = <span class="self">Self</span>::config_path();
+        fs::create_dir_all(path.parent().unwrap())<span class="question-mark">?</span>;
+        fs::write(path, serde_json::to_string_pretty(<span class="self">self</span>)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
-    }
-
-    <span class="kw">pub fn </span>set(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="kw">match </span>ConfigKey::from_str(key)<span class="question-mark">? </span>{
-            ConfigKey::GithubToken =&gt; <span class="self">self</span>.github_token = <span class="prelude-val">Some</span>(value.to_string()),
-        }
-        <span class="self">self</span>.save()<span class="question-mark">?</span>;
-        <span class="macro">println!</span>(<span class="string">"✔ Configuration saved to {}"</span>, get_config_path()<span class="question-mark">?</span>.display());
-        <span class="prelude-val">Ok</span>(())
-    }
-
-    <span class="kw">pub fn </span>display(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="macro">println!</span>(<span class="string">"\n⚙️  Current Configuration"</span>);
-        <span class="macro">println!</span>(<span class="string">"━━━━━━━━━━━━━━━━━━━━━━━━━━━"</span>);
-        <span class="self">self</span>.display_value(ConfigKey::GithubToken);
-        <span class="macro">println!</span>();
-    }
-
-    <span class="kw">fn </span>display_value(<span class="kw-2">&amp;</span><span class="self">self</span>, key: ConfigKey) {
-        <span class="kw">match </span>key {
-            ConfigKey::GithubToken =&gt; {
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = <span class="kw-2">&amp;</span><span class="self">self</span>.github_token {
-                    <span class="macro">println!</span>(
-                        <span class="string">"🔑 {}: {}...{}"</span>,
-                        key.as_str(),
-                        <span class="kw-2">&amp;</span>token[..<span class="number">7</span>],
-                        <span class="kw-2">&amp;</span>token[token.len() - <span class="number">4</span>..]
-                    );
-                } <span class="kw">else </span>{
-                    <span class="macro">println!</span>(<span class="string">"🔑 {}: Not set"</span>, key.as_str());
-                }
-            }
-        }
     }
 }
 
-<span class="kw">fn </span>get_config_path() -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf&gt; {
-    <span class="kw">let </span>home = home_dir().ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"Could not find home directory"</span>))<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(home.join(<span class="string">".rustytag"</span>).join(<span class="string">"config.json"</span>))
+<span class="kw">impl </span>LocalConfig {
+    <span class="kw">fn </span>config_path() -&gt; PathBuf {
+        PathBuf::from(<span class="string">".rustytag.json"</span>)
+    }
+
+    <span class="kw">pub fn </span>load() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>path = <span class="self">Self</span>::config_path();
+        <span class="kw">if </span>!path.exists() {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">Self</span>::default());
+        }
+        <span class="kw">let </span>content = fs::read_to_string(path)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(serde_json::from_str(<span class="kw-2">&amp;</span>content)<span class="question-mark">?</span>)
+    }
+
+    <span class="kw">pub fn </span>save(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="kw">let </span>path = <span class="self">Self</span>::config_path();
+        fs::write(path, serde_json::to_string_pretty(<span class="self">self</span>)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
+    }
 }
 
-<span class="doccomment">/// 处理配置命令的便捷函数
-</span><span class="kw">pub fn </span>handle_config_command(set: <span class="prelude-ty">Option</span>&lt;String&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>config = Config::load()<span class="question-mark">?</span>;
+<span class="kw">pub fn </span>handle_config_command(set: <span class="prelude-ty">Option</span>&lt;String&gt;, global: bool, local: bool) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(set_str) = set {
-        <span class="kw">let </span>parts: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = set_str.splitn(<span class="number">2</span>, <span class="string">'='</span>).collect();
+        <span class="kw">let </span>parts: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = set_str.split(<span class="string">'='</span>).collect();
         <span class="kw">if </span>parts.len() != <span class="number">2 </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"Invalid format. Use KEY=VALUE"</span>));
         }
-        config.set(parts[<span class="number">0</span>], parts[<span class="number">1</span>])<span class="question-mark">?</span>;
-        <span class="macro">println!</span>(<span class="string">"✔ Configuration updated"</span>);
+
+        <span class="comment">// 如果没有指定 local 或 global，根据配置类型自动选择
+        </span><span class="kw">let </span>(is_global, is_local) = <span class="kw">if </span>!global &amp;&amp; !local {
+            <span class="kw">match </span>parts[<span class="number">0</span>] {
+                <span class="string">"GITHUB_TOKEN" </span>=&gt; (<span class="bool-val">true</span>, <span class="bool-val">false</span>),
+                <span class="string">"VERSION_PREFIX" </span>=&gt; (<span class="bool-val">false</span>, <span class="bool-val">true</span>),
+                <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"Unknown configuration key"</span>)),
+            }
+        } <span class="kw">else </span>{
+            (global, local)
+        };
+
+        <span class="kw">match </span>(parts[<span class="number">0</span>], is_global, is_local) {
+            (<span class="string">"GITHUB_TOKEN"</span>, <span class="bool-val">true</span>, <span class="kw">_</span>) =&gt; {
+                <span class="kw">let </span><span class="kw-2">mut </span>config = GlobalConfig::load()<span class="question-mark">?</span>;
+                config.github_token = <span class="prelude-val">Some</span>(parts[<span class="number">1</span>].to_string());
+                config.save()<span class="question-mark">?</span>;
+                <span class="macro">println!</span>(<span class="string">"✔ Global configuration saved"</span>);
+            }
+            (<span class="string">"VERSION_PREFIX"</span>, <span class="kw">_</span>, <span class="bool-val">true</span>) =&gt; {
+                <span class="kw">let </span><span class="kw-2">mut </span>config = LocalConfig::load()<span class="question-mark">?</span>;
+                config.version_prefix = <span class="prelude-val">Some</span>(parts[<span class="number">1</span>].to_string());
+                config.save()<span class="question-mark">?</span>;
+                <span class="macro">println!</span>(<span class="string">"✔ Local configuration saved"</span>);
+            }
+            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(
+                <span class="string">"Invalid configuration: GITHUB_TOKEN must be global, VERSION_PREFIX must be local"
+            </span>)),
+        }
     } <span class="kw">else </span>{
-        config.display();
+        <span class="comment">// 显示当前配置
+        </span><span class="macro">println!</span>(<span class="string">"\n⚙️  Current Configuration"</span>);
+        <span class="macro">println!</span>(<span class="string">"━━━━━━━━━━━━━━━━━━━━━━━━━━━"</span>);
+
+        <span class="comment">// 显示全局配置
+        </span><span class="macro">println!</span>(<span class="string">"🌍 Global Configuration:"</span>);
+        <span class="kw">let </span>global_config = GlobalConfig::load()<span class="question-mark">?</span>;
+        <span class="macro">println!</span>(
+            <span class="string">"  🔑 GITHUB_TOKEN: {}"</span>,
+            global_config
+                .github_token
+                .as_ref()
+                .map(|t| <span class="macro">format!</span>(<span class="string">"{}...{}"</span>, <span class="kw-2">&amp;</span>t[..<span class="number">6</span>], <span class="kw-2">&amp;</span>t[t.len() - <span class="number">4</span>..]))
+                .unwrap_or_else(|| <span class="string">"Not set"</span>.to_string())
+        );
+
+        <span class="comment">// 显示本地配置
+        </span><span class="macro">println!</span>(<span class="string">"\n📍 Local Configuration:"</span>);
+        <span class="kw">let </span>local_config = LocalConfig::load()<span class="question-mark">?</span>;
+        <span class="macro">println!</span>(
+            <span class="string">"  📌 VERSION_PREFIX: {}"</span>,
+            local_config.version_prefix.as_deref().unwrap_or(<span class="string">"Not set"</span>)
+        );
+        <span class="macro">println!</span>();
     }
+
     <span class="prelude-val">Ok</span>(())
 }
 </code></pre></div></section></main></body></html>

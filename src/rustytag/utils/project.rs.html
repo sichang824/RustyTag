@@ -101,10 +101,10 @@
             });
         }
 
-        <span class="kw">if </span>Path::new(<span class="string">".rustytag"</span>).exists() {
-            <span class="macro">println!</span>(<span class="string">"Detected custom project file: .rustytag"</span>);
+        <span class="kw">if </span>Path::new(<span class="string">".rustytag.json"</span>).exists() {
+            <span class="macro">println!</span>(<span class="string">"Detected custom project file: .rustytag.json"</span>);
             files.push(<span class="self">Self </span>{
-                path: PathBuf::from(<span class="string">".rustytag"</span>),
+                path: PathBuf::from(<span class="string">".rustytag.json"</span>),
                 file_type: ProjectFileType::Other,
             });
         }

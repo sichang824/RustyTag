@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["BumpType"],"fn":["bump_version","get_latest_version","update_cargo_toml","update_package_json","update_pyproject_toml","update_version_to_project"]};
+window.SIDEBAR_ITEMS = {"enum":["BumpType"],"fn":["get_latest_version","update_cargo_toml","update_package_json","update_pyproject_toml","update_version_to_project"],"struct":["Version"]};

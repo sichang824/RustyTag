@@ -523,16 +523,35 @@
 <a href="#522" id="522">522</a>
 <a href="#523" id="523">523</a>
 <a href="#524" id="524">524</a>
-<a href="#525" id="525">525</a></pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a></pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>dirs::home_dir;
 <span class="kw">use </span>git2::{Remote, Repository};
-<span class="kw">use </span>semver::Version;
 <span class="kw">use </span>std::fs;
 <span class="kw">use </span>std::io::Write;
 <span class="kw">use </span>std::path::Path;
 
 <span class="kw">use </span><span class="kw">super</span>::file::create_gitignore;
 <span class="kw">use </span><span class="kw">super</span>::project::ProjectFile;
+<span class="kw">use </span><span class="kw">super</span>::version::Version;
 
 <span class="comment">// Git 操作相关功能模块
 //
@@ -569,29 +588,43 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">pub fn </span>get_latest_tag() -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; {
+<span class="kw">pub fn </span>get_latest_tag() -&gt; <span class="prelude-ty">Result</span>&lt;Version&gt; {
     <span class="kw">let </span>repo = Repository::open(<span class="string">"."</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>tags = repo.tag_names(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// 如果没有标签，返回初始版本
+    <span class="comment">// If no tags found, return initial version
     </span><span class="kw">if </span>tags.is_empty() {
-        <span class="macro">println!</span>(<span class="string">"⚠️ 没有找到任何标签，使用初始版本"</span>);
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="string">"initial"</span>.to_string());
+        <span class="macro">println!</span>(<span class="string">"⚠️ No tags found, using initial version"</span>);
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(Version::new(semver::Version::new(<span class="number">0</span>, <span class="number">1</span>, <span class="number">0</span>)));
     }
 
-    <span class="comment">// 获取最新的有效版本标签
-    </span><span class="kw">let </span>latest_tag = tags
+    <span class="comment">// Collect all tags and parse to Version
+    </span><span class="kw">let </span><span class="kw-2">mut </span>versions: Vec&lt;<span class="kw">_</span>&gt; = tags
         .iter()
         .flatten()
         .filter_map(|t| Version::parse(t).ok())
-        .max()
-        .map(|v| v.to_string())
-        .unwrap_or_else(|| {
-            <span class="macro">println!</span>(<span class="string">"⚠️ 没有找到有效的版本标签，使用初始版本"</span>);
-            <span class="string">"initial"</span>.to_string()
-        });
+        .collect();
 
-    <span class="prelude-val">Ok</span>(latest_tag)
+    <span class="comment">// Sort by version number in descending order
+    </span>versions.sort_by(|a, b| b.version.cmp(<span class="kw-2">&amp;</span>a.version));
+
+    <span class="comment">// Get latest version
+    </span><span class="kw">let </span>latest_version = versions.first().cloned().ok_or_else(|| {
+        <span class="macro">println!</span>(<span class="string">"⚠️ No valid version tags found, using initial version"</span>);
+        <span class="macro">anyhow::anyhow!</span>(<span class="string">"No valid version tags found"</span>)
+    })<span class="question-mark">?</span>;
+
+    <span class="comment">// If prefix exists and not configured, save to config
+    </span><span class="kw">if </span>!latest_version.prefix.is_empty() {
+        <span class="kw">let </span><span class="kw-2">mut </span>config = <span class="kw">super</span>::config::LocalConfig::load()<span class="question-mark">?</span>;
+        <span class="kw">if </span>config.version_prefix.is_none() {
+            config.version_prefix = <span class="prelude-val">Some</span>(latest_version.prefix.clone());
+            config.save()<span class="question-mark">?</span>;
+            <span class="macro">println!</span>(<span class="string">"✨ Version prefix auto-configured: {}"</span>, latest_version.prefix);
+        }
+    }
+
+    <span class="prelude-val">Ok</span>(latest_version)
 }
 
 <span class="kw">pub fn </span>commit_changes(repo: <span class="kw-2">&amp;</span>Repository, version: <span class="kw-2">&amp;</span>Version) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
@@ -607,7 +640,7 @@
         <span class="prelude-val">Some</span>(<span class="string">"HEAD"</span>),
         <span class="kw-2">&amp;</span>signature,
         <span class="kw-2">&amp;</span>signature,
-        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"chore: release {}"</span>, version),
+        <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"chore: release {}"</span>, version.version),
         <span class="kw-2">&amp;</span>tree,
         <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>parent_commit],
     )<span class="question-mark">?</span>;
@@ -626,7 +659,7 @@
 ///
 /// ```no_run
 /// use git2::Repository;
-/// use semver::Version;
+/// use version::Version;
 /// use rustytag::utils::git::create_tag;
 ///
 /// # fn main() -&gt; anyhow::Result&lt;()&gt; {
@@ -650,8 +683,8 @@
         <span class="kw-2">&amp;</span>version.to_string(),
         <span class="kw-2">&amp;</span>obj,
         <span class="kw-2">&amp;</span>signature,
-        <span class="kw-2">&amp;</span>version_content, <span class="comment">// 使用 "---" 之后的所有内容作为 tag 消息
-        </span><span class="bool-val">false</span>,
+        <span class="kw-2">&amp;</span>version_content,
+        <span class="bool-val">false</span>,
     )<span class="question-mark">?</span>;
     <span class="macro">println!</span>(<span class="string">"✔ [Created] tag {}"</span>, version);
     <span class="prelude-val">Ok</span>(())
@@ -671,19 +704,19 @@
 }
 
 <span class="kw">pub fn </span>reset_tags(repo: <span class="kw-2">&amp;</span>Repository) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-    <span class="comment">// 获取远程仓库
+    <span class="comment">// Get remote repository
     </span><span class="kw">let </span><span class="kw-2">mut </span>remote = get_remote(repo)<span class="question-mark">?</span>;
 
-    <span class="comment">// 获取远程 tag 列表
+    <span class="comment">// Get remote tag list
     </span><span class="kw">let </span>remote_tags = fetch_remote_tags(<span class="kw-2">&amp;mut </span>remote)<span class="question-mark">?</span>;
 
-    <span class="comment">// 删除本地所有 tag
+    <span class="comment">// Delete all local tags
     </span><span class="kw">let </span>local_tags = repo.tag_names(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
     <span class="kw">for </span>tag <span class="kw">in </span>local_tags.iter().flatten() {
         repo.tag_delete(tag)<span class="question-mark">?</span>;
     }
 
-    <span class="comment">// 从远程获取 tag
+    <span class="comment">// Get tags from remote
     </span><span class="kw">for </span>tag <span class="kw">in </span>remote_tags {
         repo.tag(
             <span class="kw-2">&amp;</span>tag,
@@ -700,13 +733,13 @@
 
 <span class="kw">fn </span>fetch_remote_tags(remote: <span class="kw-2">&amp;mut </span>Remote) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;String&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>remote_tags = Vec::new();
-    <span class="macro">println!</span>(<span class="string">"🔄 正在连接远程仓库..."</span>);
+    <span class="macro">println!</span>(<span class="string">"🔄 Connecting to remote repository..."</span>);
 
-    <span class="comment">// 创建认证回调
+    <span class="comment">// Create auth callbacks
     </span><span class="kw">let </span>create_callbacks = || {
         <span class="kw">let </span><span class="kw-2">mut </span>callbacks = git2::RemoteCallbacks::new();
         callbacks.credentials(|_url, username_from_url, _allowed_types| {
-            <span class="kw">let </span>home_dir = home_dir().ok_or_else(|| git2::Error::from_str(<span class="string">"无法获取用户家目录"</span>))<span class="question-mark">?</span>;
+            <span class="kw">let </span>home_dir = home_dir().ok_or_else(|| git2::Error::from_str(<span class="string">"Cannot get home directory"</span>))<span class="question-mark">?</span>;
             <span class="kw">let </span>private_key_path = home_dir.join(<span class="string">".ssh/keys/privite/github"</span>);
             git2::Cred::ssh_key(
                 username_from_url.unwrap_or(<span class="string">"git"</span>),
@@ -718,28 +751,28 @@
         callbacks
     };
 
-    <span class="comment">// 设置 fetch 选项
+    <span class="comment">// Set fetch options
     </span><span class="kw">let </span><span class="kw-2">mut </span>fetch_options = git2::FetchOptions::new();
     fetch_options.remote_callbacks(create_callbacks());
     fetch_options.download_tags(git2::AutotagOption::All);
 
-    <span class="comment">// 执行 fetch
-    </span><span class="macro">println!</span>(<span class="string">"🔍 正在获取远程 tags..."</span>);
+    <span class="comment">// Execute fetch
+    </span><span class="macro">println!</span>(<span class="string">"🔍 Fetching remote tags..."</span>);
     remote.fetch(<span class="kw-2">&amp;</span>[<span class="string">"refs/tags/*:refs/tags/*"</span>], <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>fetch_options), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// 获取远程 tag 列表
+    <span class="comment">// Get remote tag list
     </span><span class="kw">let </span>connection = remote.connect_auth(git2::Direction::Fetch, <span class="prelude-val">Some</span>(create_callbacks()), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 
     <span class="kw">for </span>head <span class="kw">in </span>connection.list()<span class="question-mark">?</span>.iter() {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(tag_name) = head.name().strip_prefix(<span class="string">"refs/tags/"</span>) {
             <span class="kw">if </span>!tag_name.ends_with(<span class="string">"^{}"</span>) {
-                <span class="macro">println!</span>(<span class="string">"🏷️ 发现远程 tag: {}"</span>, tag_name);
+                <span class="macro">println!</span>(<span class="string">"🏷️ Found remote tag: {}"</span>, tag_name);
                 remote_tags.push(tag_name.to_string());
             }
         }
     }
 
-    <span class="macro">println!</span>(<span class="string">"✅ 成功获取 {} 个远程 tags"</span>, remote_tags.len());
+    <span class="macro">println!</span>(<span class="string">"✅ Successfully fetched {} remote tags"</span>, remote_tags.len());
     <span class="prelude-val">Ok</span>(remote_tags)
 }
 
@@ -750,18 +783,18 @@
     <span class="kw">pub </span>message: String,
 }
 
-<span class="doccomment">/// 获取当前仓库的所有提交信息
+<span class="doccomment">/// Get all commit information for the current repository
 </span><span class="kw">pub fn </span>get_git_commits() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;GitCommit&gt;&gt; {
-    <span class="comment">// 打开当前目录的 git 仓库
+    <span class="comment">// Open git repository for current directory
     </span><span class="kw">let </span>repo = Repository::open(Path::new(<span class="string">"."</span>)).context(<span class="string">"Failed to open git repository"</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// 获取 HEAD 引用
+    <span class="comment">// Get HEAD reference
     </span><span class="kw">let </span>head = repo.head().context(<span class="string">"Failed to get HEAD reference"</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// 获取 HEAD 指向的 commit
+    <span class="comment">// Get HEAD pointing commit
     </span><span class="kw">let </span>commit = head.peel_to_commit().context(<span class="string">"Failed to peel to commit"</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// 遍历提交历史
+    <span class="comment">// Iterate through commit history
     </span><span class="kw">let </span><span class="kw-2">mut </span>commits = Vec::new();
     <span class="kw">let </span><span class="kw-2">mut </span>walk = repo.revwalk().context(<span class="string">"Failed to create revwalk"</span>)<span class="question-mark">?</span>;
     walk.push(commit.id()).context(<span class="string">"Failed to push commit"</span>)<span class="question-mark">?</span>;
@@ -786,7 +819,7 @@
 <span class="kw">pub fn </span>get_remote_url() -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; {
     <span class="kw">let </span>repo = Repository::open(Path::new(<span class="string">"."</span>))<span class="question-mark">?</span>;
 
-    <span class="comment">// 获取远程仓库
+    <span class="comment">// Get remote repository
     </span><span class="kw">let </span>remote = get_remote(<span class="kw-2">&amp;</span>repo)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>url = remote
@@ -797,7 +830,7 @@
 
 <span class="kw">fn </span>convert_ssh_to_https(url: <span class="kw-2">&amp;</span>str) -&gt; String {
     <span class="kw">if </span>url.starts_with(<span class="string">"git@"</span>) {
-        <span class="comment">// 转换 git@github.com:user/repo.git 为 https://github.com/user/repo
+        <span class="comment">// Convert git@github.com:user/repo.git to https://github.com/user/repo
         </span><span class="kw">let </span>parts: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = url.split(<span class="string">'@'</span>).collect();
         <span class="kw">if </span>parts.len() == <span class="number">2 </span>{
             <span class="kw">let </span>domain_and_path = parts[<span class="number">1</span>].replace(<span class="string">':'</span>, <span class="string">"/"</span>);
@@ -808,22 +841,19 @@
 }
 
 <span class="kw">pub struct </span>ProjectInfo {
-    <span class="kw">pub </span>version: String,
+    <span class="kw">pub </span>version: Version,
     <span class="kw">pub </span>repo_url: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="kw">pub </span>commit_count: usize,
     <span class="kw">pub </span>branch_name: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
 <span class="kw">pub fn </span>get_project_info(repo: <span class="kw-2">&amp;</span>Repository) -&gt; <span class="prelude-ty">Result</span>&lt;ProjectInfo&gt; {
-    <span class="kw">let </span>version = get_latest_tag()<span class="question-mark">?</span>;
+    <span class="kw">let </span>version = get_latest_tag().unwrap_or_else(|<span class="kw">_</span>| Version::new(semver::Version::new(<span class="number">0</span>, <span class="number">1</span>, <span class="number">0</span>)));
+
     <span class="kw">let </span>repo_url = get_remote_url().ok();
-
-    <span class="comment">// 获取提交数量
-    </span><span class="kw">let </span>commits = get_git_commits()<span class="question-mark">?</span>;
+    <span class="kw">let </span>commits = get_git_commits()<span class="question-mark">?</span>;
     <span class="kw">let </span>commit_count = commits.len();
-
-    <span class="comment">// 获取当前分支名
-    </span><span class="kw">let </span>branch_name = repo.head()<span class="question-mark">?</span>.shorthand().map(|s| s.to_string());
+    <span class="kw">let </span>branch_name = repo.head()<span class="question-mark">?</span>.shorthand().map(|s| s.to_string());
 
     <span class="prelude-val">Ok</span>(ProjectInfo {
         version,
@@ -838,33 +868,33 @@
     <span class="kw">let </span>project_files = ProjectFile::detect_all()<span class="question-mark">?</span>;
     <span class="kw">for </span>file <span class="kw">in </span>project_files {
         <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = index.add_path(<span class="kw-2">&amp;</span>file.path) {
-            <span class="macro">println!</span>(<span class="string">"⚠️ 无法添加文件 {:?}: {}"</span>, file.path, e);
+            <span class="macro">println!</span>(<span class="string">"⚠️ Cannot add file {:?}: {}"</span>, file.path, e);
         }
     }
     index.write()<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// 获取指定 tag 之后的所有新提交
+<span class="doccomment">/// Get all new commits after a specific tag
 </span><span class="kw">pub fn </span>get_commits_after_tag(tag: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;GitCommit&gt;&gt; {
     <span class="kw">let </span>repo = Repository::open(<span class="string">"."</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>commits = Vec::new();
 
-    <span class="comment">// 获取 tag 对应的 commit
+    <span class="comment">// Get tag pointing commit
     </span><span class="kw">let </span>tag_obj = repo.revparse_single(tag)<span class="question-mark">?</span>;
     <span class="kw">let </span>tag_commit = tag_obj.peel_to_commit()<span class="question-mark">?</span>;
 
-    <span class="comment">// 获取 HEAD commit
+    <span class="comment">// Get HEAD commit
     </span><span class="kw">let </span>head = repo.head()<span class="question-mark">?</span>.peel_to_commit()<span class="question-mark">?</span>;
 
-    <span class="comment">// 创建一个版本遍历器
+    <span class="comment">// Create a version walker
     </span><span class="kw">let </span><span class="kw-2">mut </span>revwalk = repo.revwalk()<span class="question-mark">?</span>;
     revwalk.push(head.id())<span class="question-mark">?</span>;
 
-    <span class="comment">// 设置遍历范围：从 HEAD 到 tag
+    <span class="comment">// Set traversal range: from HEAD to tag
     </span>revwalk.hide(tag_commit.id())<span class="question-mark">?</span>;
 
-    <span class="comment">// 遍历所有提交
+    <span class="comment">// Iterate through all commits
     </span><span class="kw">for </span>oid <span class="kw">in </span>revwalk {
         <span class="kw">let </span>commit_id = oid<span class="question-mark">?</span>;
         <span class="kw">let </span>commit = repo.find_commit(commit_id)<span class="question-mark">?</span>;
@@ -879,7 +909,7 @@
     <span class="prelude-val">Ok</span>(commits)
 }
 
-<span class="doccomment">/// 获取本地所有标签
+<span class="doccomment">/// Get all local tags
 </span><span class="kw">pub fn </span>get_local_tags(repo: <span class="kw-2">&amp;</span>Repository) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;String&gt;&gt; {
     <span class="kw">let </span>tags = repo.tag_names(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(tags
@@ -888,7 +918,7 @@
         .collect())
 }
 
-<span class="doccomment">/// 创建 Git 认证回调
+<span class="doccomment">/// Create Git auth callbacks
 </span><span class="kw">fn </span>create_callbacks() -&gt; git2::RemoteCallbacks&lt;<span class="lifetime">'static</span>&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>callbacks = git2::RemoteCallbacks::new();
     callbacks.credentials(|_url, username_from_url, _allowed_types| {
@@ -905,11 +935,11 @@
     callbacks
 }
 
-<span class="doccomment">/// 获取远程所有标签
+<span class="doccomment">/// Get all remote tags
 </span><span class="kw">pub fn </span>get_remote_tags(repo: <span class="kw-2">&amp;</span>Repository) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;String&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>remote = repo.find_remote(<span class="string">"origin"</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// 设置认证回调
+    <span class="comment">// Set auth callbacks
     </span><span class="kw">let </span>callbacks = create_callbacks();
     remote.connect_auth(git2::Direction::Fetch, <span class="prelude-val">Some</span>(callbacks), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>remote_list = remote.list()<span class="question-mark">?</span>;
@@ -918,14 +948,14 @@
         .iter()
         .filter(|r| r.name().starts_with(<span class="string">"refs/tags/"</span>))
         .map(|r| r.name().trim_start_matches(<span class="string">"refs/tags/"</span>).to_string())
-        .filter(|name| !name.ends_with(<span class="string">"^{}"</span>)) <span class="comment">// 过滤掉注释标签
+        .filter(|name| !name.ends_with(<span class="string">"^{}"</span>)) <span class="comment">// Filter out comment tags
         </span>.collect();
 
     remote.disconnect()<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(tags)
 }
 
-<span class="doccomment">/// 标签同步状态
+<span class="doccomment">/// Tag sync status
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>TagSyncStatus {
     <span class="kw">pub </span>all_tags: Vec&lt;String&gt;,
@@ -933,7 +963,7 @@
     <span class="kw">pub </span>to_pull: Vec&lt;String&gt;,
 }
 
-<span class="doccomment">/// 比较本地和远程标签
+<span class="doccomment">/// Compare local and remote tags
 </span><span class="kw">pub fn </span>compare_tags(repo: <span class="kw-2">&amp;</span>Repository) -&gt; <span class="prelude-ty">Result</span>&lt;TagSyncStatus&gt; {
     <span class="kw">let </span>local_tags = get_local_tags(repo)<span class="question-mark">?</span>;
     <span class="kw">let </span>remote_tags = get_remote_tags(repo)<span class="question-mark">?</span>;
@@ -976,13 +1006,21 @@
             (<span class="bool-val">false</span>, <span class="bool-val">true</span>) =&gt; <span class="string">"📥"</span>,
             (<span class="bool-val">false</span>, <span class="bool-val">false</span>) =&gt; <span class="macro">unreachable!</span>(),
         };
+
+        <span class="comment">// Try to parse version number for better display effect
+        </span><span class="kw">let </span>display_version = <span class="kw">if let </span><span class="prelude-val">Ok</span>(version) = Version::parse(tag) {
+            version.to_string()
+        } <span class="kw">else </span>{
+            tag.to_string()
+        };
+
         <span class="kw">let </span>status_text = <span class="kw">match </span>(in_local, in_remote) {
             (<span class="bool-val">true</span>, <span class="bool-val">true</span>) =&gt; <span class="string">"(synced)"</span>,
             (<span class="bool-val">true</span>, <span class="bool-val">false</span>) =&gt; <span class="string">"(local only)"</span>,
             (<span class="bool-val">false</span>, <span class="bool-val">true</span>) =&gt; <span class="string">"(remote only)"</span>,
             (<span class="bool-val">false</span>, <span class="bool-val">false</span>) =&gt; <span class="macro">unreachable!</span>(),
         };
-        <span class="macro">println!</span>(<span class="string">"{} {} {}"</span>, status_icon, tag, status_text);
+        <span class="macro">println!</span>(<span class="string">"{} {} {}"</span>, status_icon, display_version, status_text);
         <span class="kw">if </span>in_local != in_remote {
             has_differences = <span class="bool-val">true</span>;
         }
