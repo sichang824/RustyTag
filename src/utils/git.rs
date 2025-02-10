@@ -1,13 +1,13 @@
 use anyhow::{Context, Result};
 use dirs::home_dir;
 use git2::{Remote, Repository};
-use semver::Version;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
 
 use super::file::create_gitignore;
 use super::project::ProjectFile;
+use super::version::Version;
 
 // Git 操作相关功能模块
 //
@@ -44,29 +44,43 @@ pub fn initialize_git_repo() -> Result<()> {
     Ok(())
 }
 
-pub fn get_latest_tag() -> Result<String> {
+pub fn get_latest_tag() -> Result<Version> {
     let repo = Repository::open(".")?;
     let tags = repo.tag_names(None)?;
 
     // 如果没有标签，返回初始版本
     if tags.is_empty() {
         println!("⚠️ 没有找到任何标签，使用初始版本");
-        return Ok("initial".to_string());
+        return Ok(Version::new(semver::Version::new(0, 1, 0)));
     }
 
-    // 获取最新的有效版本标签
-    let latest_tag = tags
+    // 收集所有标签并解析为 Version
+    let mut versions: Vec<_> = tags
         .iter()
         .flatten()
         .filter_map(|t| Version::parse(t).ok())
-        .max()
-        .map(|v| v.to_string())
-        .unwrap_or_else(|| {
-            println!("⚠️ 没有找到有效的版本标签，使用初始版本");
-            "initial".to_string()
-        });
+        .collect();
 
-    Ok(latest_tag)
+    // 按版本号降序排序
+    versions.sort_by(|a, b| b.version.cmp(&a.version));
+
+    // 获取最新版本
+    let latest_version = versions.first().cloned().ok_or_else(|| {
+        println!("⚠️ 没有找到有效的版本标签，使用初始版本");
+        anyhow::anyhow!("No valid version tags found")
+    })?;
+
+    // 如果有前缀且未配置，自动保存到配置中
+    if !latest_version.prefix.is_empty() {
+        let mut config = super::config::LocalConfig::load()?;
+        if config.version_prefix.is_none() {
+            config.version_prefix = Some(latest_version.prefix.clone());
+            config.save()?;
+            println!("✨ 已自动配置版本前缀: {}", latest_version.prefix);
+        }
+    }
+
+    Ok(latest_version)
 }
 
 pub fn commit_changes(repo: &Repository, version: &Version) -> Result<()> {
@@ -82,7 +96,7 @@ pub fn commit_changes(repo: &Repository, version: &Version) -> Result<()> {
         Some("HEAD"),
         &signature,
         &signature,
-        &format!("chore: release {}", version),
+        &format!("chore: release {}", version.version),
         &tree,
         &[&parent_commit],
     )?;
@@ -101,7 +115,7 @@ pub fn commit_changes(repo: &Repository, version: &Version) -> Result<()> {
 ///
 /// ```no_run
 /// use git2::Repository;
-/// use semver::Version;
+/// use version::Version;
 /// use rustytag::utils::git::create_tag;
 ///
 /// # fn main() -> anyhow::Result<()> {
@@ -125,7 +139,7 @@ pub fn create_tag(repo: &Repository, version: &Version) -> Result<()> {
         &version.to_string(),
         &obj,
         &signature,
-        &version_content, // 使用 "---" 之后的所有内容作为 tag 消息
+        &version_content,
         false,
     )?;
     println!("✔ [Created] tag {}", version);
@@ -290,13 +304,8 @@ pub struct ProjectInfo {
 }
 
 pub fn get_project_info(repo: &Repository) -> Result<ProjectInfo> {
-    let version_str = get_latest_tag()?;
-    let version = if version_str == "initial" {
-        Version::new(0, 1, 0)
-    } else {
-        Version::parse(&version_str)?
-    };
-    
+    let version = get_latest_tag().unwrap_or_else(|_| Version::new(semver::Version::new(0, 1, 0)));
+
     let repo_url = get_remote_url().ok();
     let commits = get_git_commits()?;
     let commit_count = commits.len();
@@ -453,13 +462,21 @@ fn display_sync_status(status: &TagSyncStatus) -> bool {
             (false, true) => "📥",
             (false, false) => unreachable!(),
         };
+
+        // 尝试解析版本号以获得更好的显示效果
+        let display_version = if let Ok(version) = Version::parse(tag) {
+            version.to_string()
+        } else {
+            tag.to_string()
+        };
+
         let status_text = match (in_local, in_remote) {
             (true, true) => "(synced)",
             (true, false) => "(local only)",
             (false, true) => "(remote only)",
             (false, false) => unreachable!(),
         };
-        println!("{} {} {}", status_icon, tag, status_text);
+        println!("{} {} {}", status_icon, display_version, status_text);
         if in_local != in_remote {
             has_differences = true;
         }

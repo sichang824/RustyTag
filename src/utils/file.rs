@@ -1,8 +1,9 @@
 use anyhow::Result;
 use chrono::Local;
-use semver::Version;
 use std::fs::OpenOptions;
 use std::io::Write;
+
+use super::version::Version;
 
 pub fn create_changelog(version: &Version) -> Result<()> {
     println!("🔄 开始生成 CHANGELOG...");
@@ -40,7 +41,10 @@ pub fn create_changelog(version: &Version) -> Result<()> {
     println!("📌 上一个版本: {}", previous_version);
 
     // 写入版本标题和对比链接
-    if previous_version == "initial" {
+    let initial_version =
+        Version::new(semver::Version::new(0, 1, 0)).with_prefix(previous_version.prefix.clone());
+
+    if previous_version.version == initial_version.version {
         writeln!(
             file,
             "### [{}]({}/commits/{}) ({})",
@@ -64,12 +68,12 @@ pub fn create_changelog(version: &Version) -> Result<()> {
 
     // 获取提交记录
     println!("🔍 获取提交记录...");
-    let commits = if previous_version == "initial" {
+    let commits = if previous_version.version == initial_version.version {
         println!("⚠️ 未找到上一个版本，获取所有提交");
         crate::utils::git::get_git_commits()?
     } else {
         println!("📊 获取 {} 之后的新提交", previous_version);
-        crate::utils::git::get_commits_after_tag(&previous_version)?
+        crate::utils::git::get_commits_after_tag(&previous_version.to_string())?
     };
     println!("✅ 获取到 {} 条提交记录", commits.len());
 

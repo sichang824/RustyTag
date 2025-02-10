@@ -1,6 +1,6 @@
+use super::version::Version;
 use anyhow::Result;
 use chrono::Local;
-use semver::Version;
 use serde_json::json;
 
 pub struct GitHubClient {
@@ -18,7 +18,7 @@ impl GitHubClient {
         if let Ok(token) = std::env::var("GITHUB_TOKEN") {
             Ok(token)
         } else {
-            let config = crate::utils::config::Config::load()?;
+            let config = crate::utils::config::GlobalConfig::load()?;
             config.github_token.ok_or_else(|| {
                 anyhow::anyhow!(
                     "GitHub token not found. To set it up:\n\

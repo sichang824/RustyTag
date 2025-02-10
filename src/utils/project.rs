@@ -42,10 +42,10 @@ impl ProjectFile {
             });
         }
 
-        if Path::new(".rustytag").exists() {
-            println!("Detected custom project file: .rustytag");
+        if Path::new(".rustytag.json").exists() {
+            println!("Detected custom project file: .rustytag.json");
             files.push(Self {
-                path: PathBuf::from(".rustytag"),
+                path: PathBuf::from(".rustytag.json"),
                 file_type: ProjectFileType::Other,
             });
         }

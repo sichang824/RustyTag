@@ -1,7 +1,6 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use git2::Repository;
-use semver::Version;
 use std::io::{self, Write};
 use std::path::Path;
 
@@ -13,7 +12,7 @@ use utils::{
         add_project_files, commit_changes, create_tag, get_project_info, initialize_git_repo,
         reset_tags,
     },
-    version::{bump_version, get_latest_version, update_version_to_project, BumpType},
+    version::{get_latest_version, update_version_to_project, BumpType, Version},
 };
 
 #[derive(Parser)]
@@ -53,15 +52,20 @@ enum Commands {
         /// Set a configuration value (e.g., GITHUB_TOKEN=xxx)
         #[arg(short, long)]
         set: Option<String>,
+        /// Set as global configuration
+        #[arg(short, long)]
+        global: bool,
+        /// Set as local configuration
+        #[arg(short, long)]
+        local: bool,
     },
 }
 
 fn show_project_info(repo: &Repository) -> Result<()> {
     let info = get_project_info(repo)?;
-    let formatted_version = utils::version::format_version(&info.version)?;
     println!("\n📦 Project Information");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!("🏷️  Current Version: {}", formatted_version);
+    println!("🏷️  Current Version: {}", info.version);
     if let Some(branch) = info.branch_name {
         println!("🌿 Current Branch: {}", branch);
     }
@@ -94,11 +98,11 @@ fn main() -> Result<()> {
             let repo = Repository::open(".").context("Failed to open Git repository")?;
             match cli.command {
                 Commands::Patch | Commands::Minor | Commands::Major => {
-                    let latest_tag = get_latest_version()?;
+                    let latest_version = get_latest_version()?;
                     let new_version = match cli.command {
-                        Commands::Patch => bump_version(&latest_tag, BumpType::Patch),
-                        Commands::Minor => bump_version(&latest_tag, BumpType::Minor),
-                        Commands::Major => bump_version(&latest_tag, BumpType::Major),
+                        Commands::Patch => latest_version.bump(BumpType::Patch),
+                        Commands::Minor => latest_version.bump(BumpType::Minor),
+                        Commands::Major => latest_version.bump(BumpType::Major),
                         _ => unreachable!(),
                     };
                     update_version_to_project(&new_version)?;
@@ -128,7 +132,7 @@ fn main() -> Result<()> {
 
                         print!(
                             "\n🚀 Are you sure you want to create release {}? [y/N] ",
-                            utils::version::format_version(&version)?
+                            version
                         );
                         io::stdout().flush()?;
 
@@ -147,8 +151,8 @@ fn main() -> Result<()> {
                 Commands::Sync => {
                     utils::git::show_and_sync_tags(&repo)?;
                 }
-                Commands::Config { set, .. } => {
-                    utils::config::handle_config_command(set)?;
+                Commands::Config { set, global, local } => {
+                    utils::config::handle_config_command(set, global, local)?;
                 }
                 _ => unreachable!(),
             }
