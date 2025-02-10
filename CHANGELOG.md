@@ -11,9 +11,9 @@
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://www.conventionalcommits.org/) specification when making commits.
 
 ---
-### [1.0.17](https://github.com/sichang824/RustyTag/compare/1.0.16...1.0.17) (2025-02-10)
+### [1.0.18](https://github.com/sichang824/RustyTag/compare/1.0.17...1.0.18) (2025-02-10)
 
 ### Commits
 
-* Refactor version handling and improve code formatting ([d59ee24](https://github.com/sichang824/RustyTag/commit/d59ee24fd2b0028dbdda601ca5f847657cbda3d0))
+* Improves version update handling and error reporting ([1529a81](https://github.com/sichang824/RustyTag/commit/1529a81f72e2223c6ccf520422b711a81b82f4ab))
 
