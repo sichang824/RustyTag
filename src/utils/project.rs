@@ -43,17 +43,13 @@ impl ProjectFile {
         }
 
         if Path::new(".rustytag.json").exists() {
-            println!("Detected custom project file: .rustytag.json");
+            println!("Detected rustytag project file: .rustytag.json");
             files.push(Self {
                 path: PathBuf::from(".rustytag.json"),
                 file_type: ProjectFileType::Other,
             });
         }
 
-        if files.is_empty() {
-            Err(anyhow::anyhow!("Project file not found"))
-        } else {
-            Ok(files)
-        }
+        Ok(files)
     }
 }

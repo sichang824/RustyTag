@@ -85,13 +85,19 @@ impl std::fmt::Display for Version {
 pub fn update_version_to_project(version: &Version) -> Result<()> {
     let version_files = ProjectFile::detect_all()?;
     for version_file in version_files {
-        match version_file.file_type {
-            ProjectFileType::CargoToml => update_cargo_toml(version)?,
-            ProjectFileType::PackageJson => update_package_json(version)?,
-            ProjectFileType::PyProjectToml => update_pyproject_toml(version)?,
-            ProjectFileType::Other => {
-                return Err(anyhow::anyhow!("Unsupported project file type"));
-            }
+        let result = match version_file.file_type {
+            ProjectFileType::CargoToml => update_cargo_toml(version),
+            ProjectFileType::PackageJson => update_package_json(version),
+            ProjectFileType::PyProjectToml => update_pyproject_toml(version),
+            ProjectFileType::Other => update_rustytag_json(version),
+        };
+
+        if let Err(e) = result {
+            println!(
+                "⚠️  Failed to update version in {}: {}",
+                version_file.path.display(),
+                e
+            );
         }
     }
     println!("✔ [Updated] version to {} in project files", version);
@@ -140,6 +146,21 @@ fn update_pyproject_toml(version: &Version) -> Result<()> {
     }
 
     fs::write("pyproject.toml", doc.to_string())?;
+    Ok(())
+}
+
+fn update_rustytag_json(version: &Version) -> Result<()> {
+    let rustytag_json = fs::read_to_string(".rustytag.json")?;
+    let mut json: serde_json::Value = serde_json::from_str(&rustytag_json)?;
+
+    if let Some(obj) = json.as_object_mut() {
+        obj.insert(
+            "version".to_string(),
+            serde_json::Value::String(version.version.to_string()),
+        );
+    }
+
+    fs::write(".rustytag.json", serde_json::to_string_pretty(&json)?)?;
     Ok(())
 }
 
