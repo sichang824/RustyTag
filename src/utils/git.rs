@@ -48,35 +48,35 @@ pub fn get_latest_tag() -> Result<Version> {
     let repo = Repository::open(".")?;
     let tags = repo.tag_names(None)?;
 
-    // 如果没有标签，返回初始版本
+    // If no tags found, return initial version
     if tags.is_empty() {
-        println!("⚠️ 没有找到任何标签，使用初始版本");
+        println!("⚠️ No tags found, using initial version");
         return Ok(Version::new(semver::Version::new(0, 1, 0)));
     }
 
-    // 收集所有标签并解析为 Version
+    // Collect all tags and parse to Version
     let mut versions: Vec<_> = tags
         .iter()
         .flatten()
         .filter_map(|t| Version::parse(t).ok())
         .collect();
 
-    // 按版本号降序排序
+    // Sort by version number in descending order
     versions.sort_by(|a, b| b.version.cmp(&a.version));
 
-    // 获取最新版本
+    // Get latest version
     let latest_version = versions.first().cloned().ok_or_else(|| {
-        println!("⚠️ 没有找到有效的版本标签，使用初始版本");
+        println!("⚠️ No valid version tags found, using initial version");
         anyhow::anyhow!("No valid version tags found")
     })?;
 
-    // 如果有前缀且未配置，自动保存到配置中
+    // If prefix exists and not configured, save to config
     if !latest_version.prefix.is_empty() {
         let mut config = super::config::LocalConfig::load()?;
         if config.version_prefix.is_none() {
             config.version_prefix = Some(latest_version.prefix.clone());
             config.save()?;
-            println!("✨ 已自动配置版本前缀: {}", latest_version.prefix);
+            println!("✨ Version prefix auto-configured: {}", latest_version.prefix);
         }
     }
 
@@ -160,19 +160,19 @@ pub fn get_remote(repo: &Repository) -> Result<Remote> {
 }
 
 pub fn reset_tags(repo: &Repository) -> Result<()> {
-    // 获取远程仓库
+    // Get remote repository
     let mut remote = get_remote(repo)?;
 
-    // 获取远程 tag 列表
+    // Get remote tag list
     let remote_tags = fetch_remote_tags(&mut remote)?;
 
-    // 删除本地所有 tag
+    // Delete all local tags
     let local_tags = repo.tag_names(None)?;
     for tag in local_tags.iter().flatten() {
         repo.tag_delete(tag)?;
     }
 
-    // 从远程获取 tag
+    // Get tags from remote
     for tag in remote_tags {
         repo.tag(
             &tag,
@@ -189,13 +189,13 @@ pub fn reset_tags(repo: &Repository) -> Result<()> {
 
 fn fetch_remote_tags(remote: &mut Remote) -> Result<Vec<String>> {
     let mut remote_tags = Vec::new();
-    println!("🔄 正在连接远程仓库...");
+    println!("🔄 Connecting to remote repository...");
 
-    // 创建认证回调
+    // Create auth callbacks
     let create_callbacks = || {
         let mut callbacks = git2::RemoteCallbacks::new();
         callbacks.credentials(|_url, username_from_url, _allowed_types| {
-            let home_dir = home_dir().ok_or_else(|| git2::Error::from_str("无法获取用户家目录"))?;
+            let home_dir = home_dir().ok_or_else(|| git2::Error::from_str("Cannot get home directory"))?;
             let private_key_path = home_dir.join(".ssh/keys/privite/github");
             git2::Cred::ssh_key(
                 username_from_url.unwrap_or("git"),
@@ -207,28 +207,28 @@ fn fetch_remote_tags(remote: &mut Remote) -> Result<Vec<String>> {
         callbacks
     };
 
-    // 设置 fetch 选项
+    // Set fetch options
     let mut fetch_options = git2::FetchOptions::new();
     fetch_options.remote_callbacks(create_callbacks());
     fetch_options.download_tags(git2::AutotagOption::All);
 
-    // 执行 fetch
-    println!("🔍 正在获取远程 tags...");
+    // Execute fetch
+    println!("🔍 Fetching remote tags...");
     remote.fetch(&["refs/tags/*:refs/tags/*"], Some(&mut fetch_options), None)?;
 
-    // 获取远程 tag 列表
+    // Get remote tag list
     let connection = remote.connect_auth(git2::Direction::Fetch, Some(create_callbacks()), None)?;
 
     for head in connection.list()?.iter() {
         if let Some(tag_name) = head.name().strip_prefix("refs/tags/") {
             if !tag_name.ends_with("^{}") {
-                println!("🏷️ 发现远程 tag: {}", tag_name);
+                println!("🏷️ Found remote tag: {}", tag_name);
                 remote_tags.push(tag_name.to_string());
             }
         }
     }
 
-    println!("✅ 成功获取 {} 个远程 tags", remote_tags.len());
+    println!("✅ Successfully fetched {} remote tags", remote_tags.len());
     Ok(remote_tags)
 }
 
@@ -239,18 +239,18 @@ pub struct GitCommit {
     pub message: String,
 }
 
-/// 获取当前仓库的所有提交信息
+/// Get all commit information for the current repository
 pub fn get_git_commits() -> Result<Vec<GitCommit>> {
-    // 打开当前目录的 git 仓库
+    // Open git repository for current directory
     let repo = Repository::open(Path::new(".")).context("Failed to open git repository")?;
 
-    // 获取 HEAD 引用
+    // Get HEAD reference
     let head = repo.head().context("Failed to get HEAD reference")?;
 
-    // 获取 HEAD 指向的 commit
+    // Get HEAD pointing commit
     let commit = head.peel_to_commit().context("Failed to peel to commit")?;
 
-    // 遍历提交历史
+    // Iterate through commit history
     let mut commits = Vec::new();
     let mut walk = repo.revwalk().context("Failed to create revwalk")?;
     walk.push(commit.id()).context("Failed to push commit")?;
@@ -275,7 +275,7 @@ pub fn get_git_commits() -> Result<Vec<GitCommit>> {
 pub fn get_remote_url() -> Result<String> {
     let repo = Repository::open(Path::new("."))?;
 
-    // 获取远程仓库
+    // Get remote repository
     let remote = get_remote(&repo)?;
 
     let url = remote
@@ -286,7 +286,7 @@ pub fn get_remote_url() -> Result<String> {
 
 fn convert_ssh_to_https(url: &str) -> String {
     if url.starts_with("git@") {
-        // 转换 git@github.com:user/repo.git 为 https://github.com/user/repo
+        // Convert git@github.com:user/repo.git to https://github.com/user/repo
         let parts: Vec<&str> = url.split('@').collect();
         if parts.len() == 2 {
             let domain_and_path = parts[1].replace(':', "/");
@@ -324,33 +324,33 @@ pub fn add_project_files(repo: &Repository) -> Result<()> {
     let project_files = ProjectFile::detect_all()?;
     for file in project_files {
         if let Err(e) = index.add_path(&file.path) {
-            println!("⚠️ 无法添加文件 {:?}: {}", file.path, e);
+            println!("⚠️ Cannot add file {:?}: {}", file.path, e);
         }
     }
     index.write()?;
     Ok(())
 }
 
-/// 获取指定 tag 之后的所有新提交
+/// Get all new commits after a specific tag
 pub fn get_commits_after_tag(tag: &str) -> Result<Vec<GitCommit>> {
     let repo = Repository::open(".")?;
     let mut commits = Vec::new();
 
-    // 获取 tag 对应的 commit
+    // Get tag pointing commit
     let tag_obj = repo.revparse_single(tag)?;
     let tag_commit = tag_obj.peel_to_commit()?;
 
-    // 获取 HEAD commit
+    // Get HEAD commit
     let head = repo.head()?.peel_to_commit()?;
 
-    // 创建一个版本遍历器
+    // Create a version walker
     let mut revwalk = repo.revwalk()?;
     revwalk.push(head.id())?;
 
-    // 设置遍历范围：从 HEAD 到 tag
+    // Set traversal range: from HEAD to tag
     revwalk.hide(tag_commit.id())?;
 
-    // 遍历所有提交
+    // Iterate through all commits
     for oid in revwalk {
         let commit_id = oid?;
         let commit = repo.find_commit(commit_id)?;
@@ -365,7 +365,7 @@ pub fn get_commits_after_tag(tag: &str) -> Result<Vec<GitCommit>> {
     Ok(commits)
 }
 
-/// 获取本地所有标签
+/// Get all local tags
 pub fn get_local_tags(repo: &Repository) -> Result<Vec<String>> {
     let tags = repo.tag_names(None)?;
     Ok(tags
@@ -374,7 +374,7 @@ pub fn get_local_tags(repo: &Repository) -> Result<Vec<String>> {
         .collect())
 }
 
-/// 创建 Git 认证回调
+/// Create Git auth callbacks
 fn create_callbacks() -> git2::RemoteCallbacks<'static> {
     let mut callbacks = git2::RemoteCallbacks::new();
     callbacks.credentials(|_url, username_from_url, _allowed_types| {
@@ -391,11 +391,11 @@ fn create_callbacks() -> git2::RemoteCallbacks<'static> {
     callbacks
 }
 
-/// 获取远程所有标签
+/// Get all remote tags
 pub fn get_remote_tags(repo: &Repository) -> Result<Vec<String>> {
     let mut remote = repo.find_remote("origin")?;
 
-    // 设置认证回调
+    // Set auth callbacks
     let callbacks = create_callbacks();
     remote.connect_auth(git2::Direction::Fetch, Some(callbacks), None)?;
     let remote_list = remote.list()?;
@@ -404,14 +404,14 @@ pub fn get_remote_tags(repo: &Repository) -> Result<Vec<String>> {
         .iter()
         .filter(|r| r.name().starts_with("refs/tags/"))
         .map(|r| r.name().trim_start_matches("refs/tags/").to_string())
-        .filter(|name| !name.ends_with("^{}")) // 过滤掉注释标签
+        .filter(|name| !name.ends_with("^{}")) // Filter out comment tags
         .collect();
 
     remote.disconnect()?;
     Ok(tags)
 }
 
-/// 标签同步状态
+/// Tag sync status
 #[derive(Debug)]
 pub struct TagSyncStatus {
     pub all_tags: Vec<String>,
@@ -419,7 +419,7 @@ pub struct TagSyncStatus {
     pub to_pull: Vec<String>,
 }
 
-/// 比较本地和远程标签
+/// Compare local and remote tags
 pub fn compare_tags(repo: &Repository) -> Result<TagSyncStatus> {
     let local_tags = get_local_tags(repo)?;
     let remote_tags = get_remote_tags(repo)?;
@@ -463,7 +463,7 @@ fn display_sync_status(status: &TagSyncStatus) -> bool {
             (false, false) => unreachable!(),
         };
 
-        // 尝试解析版本号以获得更好的显示效果
+        // Try to parse version number for better display effect
         let display_version = if let Ok(version) = Version::parse(tag) {
             version.to_string()
         } else {

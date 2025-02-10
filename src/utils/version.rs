@@ -33,11 +33,11 @@ impl Version {
     }
 
     pub fn parse(version_str: &str) -> Result<Self> {
-        // 分离前缀：找到第一个数字的位置
+        // Find prefix: locate position of first digit
         let prefix_end = version_str.find(|c: char| c.is_ascii_digit()).unwrap_or(0);
         let prefix = &version_str[..prefix_end];
 
-        // 分离后缀：找到版本号结束的位置
+        // Find suffix: locate end of version number
         let remaining = &version_str[prefix_end..];
         let version_end = remaining
             .find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-' && c != '+')
@@ -46,9 +46,9 @@ impl Version {
         let version_str = &remaining[..version_end];
         let suffix = &remaining[version_end..];
 
-        // 解析 semver 版本号
+        // Parse semver version number
         let version = semver::Version::parse(version_str)
-            .map_err(|e| anyhow::anyhow!("无法解析版本号: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to parse version: {}", e))?;
 
         Ok(Self {
             prefix: prefix.to_string(),
@@ -150,12 +150,12 @@ fn update_pyproject_toml(version: &Version) -> Result<()> {
 pub fn get_latest_version() -> Result<Version> {
     let version = crate::utils::git::get_latest_tag()?;
 
-    // 如果有前缀但未配置，提示用户
+    // Warn if prefix exists but not configured
     if !version.prefix.is_empty() {
         let config = crate::utils::config::LocalConfig::load()?;
         if config.version_prefix.is_none() {
-            println!("⚠️ 检测到标签前缀 '{}' 但未配置", version.prefix);
-            println!("ℹ️  您可以使用以下命令配置版本前缀：");
+            println!("⚠️  Detected tag prefix '{}' but not configured", version.prefix);
+            println!("ℹ️  You can configure version prefix using:");
             println!("   rustytag config -s VERSION_PREFIX={}", version.prefix);
         }
     }

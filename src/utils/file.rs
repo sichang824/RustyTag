@@ -6,18 +6,18 @@ use std::io::Write;
 use super::version::Version;
 
 pub fn create_changelog(version: &Version) -> Result<()> {
-    println!("🔄 开始生成 CHANGELOG...");
+    println!("🔄 Generating CHANGELOG...");
     let mut file = OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(true)
         .open("CHANGELOG.md")?;
 
-    // 获取当前日期
+    // Get current date
     let date = Local::now().format("%Y-%m-%d").to_string();
-    println!("📅 当前日期: {}", date);
+    println!("📅 Current date: {}", date);
 
-    // 如果文件为空，写入标准头部
+    // If file is empty, write standard header
     if file.metadata()?.len() == 0 {
         writeln!(file, "# Changelog")?;
         writeln!(file)?;
@@ -34,13 +34,13 @@ pub fn create_changelog(version: &Version) -> Result<()> {
         writeln!(file, "---")?;
     }
 
-    // 获取远程仓库 URL 和上一个版本号
+    // Get remote repository URL and previous version
     let remote_url = crate::utils::git::get_remote_url()?;
     let previous_version = crate::utils::git::get_latest_tag()?;
-    println!("🔗 远程仓库 URL: {}", remote_url);
-    println!("📌 上一个版本: {}", previous_version);
+    println!("🔗 Remote repository URL: {}", remote_url);
+    println!("📌 Previous version: {}", previous_version);
 
-    // 写入版本标题和对比链接
+    // Write version title and comparison link
     let initial_version =
         Version::new(semver::Version::new(0, 1, 0)).with_prefix(previous_version.prefix.clone());
 
@@ -66,22 +66,22 @@ pub fn create_changelog(version: &Version) -> Result<()> {
     }
     writeln!(file)?;
 
-    // 获取提交记录
-    println!("🔍 获取提交记录...");
+    // Get commit history
+    println!("🔍 Getting commit history...");
     let commits = if previous_version.version == initial_version.version {
-        println!("⚠️ 未找到上一个版本，获取所有提交");
+        println!("⚠️ No previous version found, getting all commits");
         crate::utils::git::get_git_commits()?
     } else {
-        println!("📊 获取 {} 之后的新提交", previous_version);
+        println!("📊 Getting new commits after {}", previous_version);
         crate::utils::git::get_commits_after_tag(&previous_version.to_string())?
     };
-    println!("✅ 获取到 {} 条提交记录", commits.len());
+    println!("✅ Found {} commits", commits.len());
 
-    // 写入所有提交
+    // Write all commits
     writeln!(file, "### Commits")?;
     writeln!(file)?;
     for commit in &commits {
-        // 跳过 "chore: release" 提交
+        // Skip "chore: release" commits
         if commit.message.starts_with("chore: release") {
             continue;
         }
@@ -96,7 +96,7 @@ pub fn create_changelog(version: &Version) -> Result<()> {
     }
     writeln!(file)?;
 
-    println!("✨ CHANGELOG.md 生成完成");
+    println!("✨ CHANGELOG.md generated successfully");
     Ok(())
 }
 
