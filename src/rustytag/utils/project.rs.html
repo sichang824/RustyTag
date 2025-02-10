@@ -53,11 +53,7 @@
 <a href="#52" id="52">52</a>
 <a href="#53" id="53">53</a>
 <a href="#54" id="54">54</a>
-<a href="#55" id="55">55</a>
-<a href="#56" id="56">56</a>
-<a href="#57" id="57">57</a>
-<a href="#58" id="58">58</a>
-<a href="#59" id="59">59</a></pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::Result;
+<a href="#55" id="55">55</a></pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>std::path::{Path, PathBuf};
 
 <span class="kw">pub enum </span>ProjectFileType {
@@ -102,18 +98,14 @@
         }
 
         <span class="kw">if </span>Path::new(<span class="string">".rustytag.json"</span>).exists() {
-            <span class="macro">println!</span>(<span class="string">"Detected custom project file: .rustytag.json"</span>);
+            <span class="macro">println!</span>(<span class="string">"Detected rustytag project file: .rustytag.json"</span>);
             files.push(<span class="self">Self </span>{
                 path: PathBuf::from(<span class="string">".rustytag.json"</span>),
                 file_type: ProjectFileType::Other,
             });
         }
 
-        <span class="kw">if </span>files.is_empty() {
-            <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"Project file not found"</span>))
-        } <span class="kw">else </span>{
-            <span class="prelude-val">Ok</span>(files)
-        }
+        <span class="prelude-val">Ok</span>(files)
     }
 }
 </code></pre></div></section></main></body></html>
