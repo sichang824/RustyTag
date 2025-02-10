@@ -58,9 +58,10 @@ enum Commands {
 
 fn show_project_info(repo: &Repository) -> Result<()> {
     let info = get_project_info(repo)?;
+    let formatted_version = utils::version::format_version(&info.version)?;
     println!("\n📦 Project Information");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!("🏷️  Current Version: {}", info.version);
+    println!("🏷️  Current Version: {}", formatted_version);
     if let Some(branch) = info.branch_name {
         println!("🌿 Current Branch: {}", branch);
     }
@@ -127,7 +128,7 @@ fn main() -> Result<()> {
 
                         print!(
                             "\n🚀 Are you sure you want to create release {}? [y/N] ",
-                            version
+                            utils::version::format_version(&version)?
                         );
                         io::stdout().flush()?;
 

@@ -283,21 +283,23 @@ fn convert_ssh_to_https(url: &str) -> String {
 }
 
 pub struct ProjectInfo {
-    pub version: String,
+    pub version: Version,
     pub repo_url: Option<String>,
     pub commit_count: usize,
     pub branch_name: Option<String>,
 }
 
 pub fn get_project_info(repo: &Repository) -> Result<ProjectInfo> {
-    let version = get_latest_tag()?;
+    let version_str = get_latest_tag()?;
+    let version = if version_str == "initial" {
+        Version::new(0, 1, 0)
+    } else {
+        Version::parse(&version_str)?
+    };
+    
     let repo_url = get_remote_url().ok();
-
-    // 获取提交数量
     let commits = get_git_commits()?;
     let commit_count = commits.len();
-
-    // 获取当前分支名
     let branch_name = repo.head()?.shorthand().map(|s| s.to_string());
 
     Ok(ProjectInfo {

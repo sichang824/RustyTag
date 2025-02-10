@@ -20,6 +20,7 @@ pub fn bump_version(version: &Version, bump: BumpType) -> Version {
 }
 
 pub fn update_version_to_project(version: &Version) -> Result<()> {
+    let formatted_version = format_version(version)?;
     let version_files = ProjectFile::detect_all()?;
     for version_file in version_files {
         match version_file.file_type {
@@ -31,7 +32,10 @@ pub fn update_version_to_project(version: &Version) -> Result<()> {
             }
         }
     }
-    println!("✔ [Updated] version to project files");
+    println!(
+        "✔ [Updated] version to {} in project files",
+        formatted_version
+    );
     Ok(())
 }
 
@@ -87,5 +91,12 @@ pub fn get_latest_version() -> Result<Version> {
         return Ok(Version::new(0, 1, 0));
     }
 
-    Ok(Version::parse(&latest_tag)?)
+    let version_str = latest_tag.trim_start_matches(|c: char| !c.is_ascii_digit());
+    Ok(Version::parse(version_str)?)
+}
+
+pub fn format_version(version: &Version) -> Result<String> {
+    let config = crate::utils::config::Config::load()?;
+    let prefix = config.version_prefix.unwrap_or_default();
+    Ok(format!("{}{}", prefix, version))
 }

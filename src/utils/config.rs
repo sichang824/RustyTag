@@ -8,11 +8,13 @@ use std::str::FromStr;
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Config {
     pub github_token: Option<String>,
+    pub version_prefix: Option<String>,
 }
 
 #[derive(Debug)]
 pub enum ConfigKey {
     GithubToken,
+    VersionPrefix,
 }
 
 impl FromStr for ConfigKey {
@@ -21,6 +23,7 @@ impl FromStr for ConfigKey {
     fn from_str(key: &str) -> Result<Self, Self::Err> {
         match key {
             "GITHUB_TOKEN" => Ok(ConfigKey::GithubToken),
+            "VERSION_PREFIX" => Ok(ConfigKey::VersionPrefix),
             _ => Err(anyhow::anyhow!("Unknown configuration key: {}", key)),
         }
     }
@@ -30,6 +33,7 @@ impl ConfigKey {
     fn as_str(&self) -> &'static str {
         match self {
             ConfigKey::GithubToken => "GITHUB_TOKEN",
+            ConfigKey::VersionPrefix => "VERSION_PREFIX",
         }
     }
 }
@@ -58,6 +62,7 @@ impl Config {
     pub fn set(&mut self, key: &str, value: &str) -> Result<()> {
         match ConfigKey::from_str(key)? {
             ConfigKey::GithubToken => self.github_token = Some(value.to_string()),
+            ConfigKey::VersionPrefix => self.version_prefix = Some(value.to_string()),
         }
         self.save()?;
         println!("✔ Configuration saved to {}", get_config_path()?.display());
@@ -68,6 +73,7 @@ impl Config {
         println!("\n⚙️  Current Configuration");
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         self.display_value(ConfigKey::GithubToken);
+        self.display_value(ConfigKey::VersionPrefix);
         println!();
     }
 
@@ -83,6 +89,13 @@ impl Config {
                     );
                 } else {
                     println!("🔑 {}: Not set", key.as_str());
+                }
+            }
+            ConfigKey::VersionPrefix => {
+                if let Some(prefix) = &self.version_prefix {
+                    println!("📌 {}: {}", key.as_str(), prefix);
+                } else {
+                    println!("📌 {}: Not set", key.as_str());
                 }
             }
         }
