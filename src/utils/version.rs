@@ -57,10 +57,6 @@ impl Version {
         })
     }
 
-    pub fn to_string(&self) -> String {
-        format!("{}{}{}", self.prefix, self.version, self.suffix)
-    }
-
     pub fn bump(&self, bump_type: BumpType) -> Self {
         let new_version = match bump_type {
             BumpType::Major => semver::Version::new(self.version.major + 1, 0, 0),
@@ -82,7 +78,7 @@ impl Version {
 
 impl std::fmt::Display for Version {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}{}{}", self.prefix, self.version, self.suffix)
     }
 }
 
@@ -154,7 +150,10 @@ pub fn get_latest_version() -> Result<Version> {
     if !version.prefix.is_empty() {
         let config = crate::utils::config::LocalConfig::load()?;
         if config.version_prefix.is_none() {
-            println!("⚠️  Detected tag prefix '{}' but not configured", version.prefix);
+            println!(
+                "⚠️  Detected tag prefix '{}' but not configured",
+                version.prefix
+            );
             println!("ℹ️  You can configure version prefix using:");
             println!("   rustytag config -s VERSION_PREFIX={}", version.prefix);
         }

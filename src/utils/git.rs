@@ -76,7 +76,10 @@ pub fn get_latest_tag() -> Result<Version> {
         if config.version_prefix.is_none() {
             config.version_prefix = Some(latest_version.prefix.clone());
             config.save()?;
-            println!("✨ Version prefix auto-configured: {}", latest_version.prefix);
+            println!(
+                "✨ Version prefix auto-configured: {}",
+                latest_version.prefix
+            );
         }
     }
 
@@ -115,12 +118,12 @@ pub fn commit_changes(repo: &Repository, version: &Version) -> Result<()> {
 ///
 /// ```no_run
 /// use git2::Repository;
-/// use version::Version;
+/// use rustytag::utils::version::Version;
 /// use rustytag::utils::git::create_tag;
 ///
 /// # fn main() -> anyhow::Result<()> {
 /// let repo = Repository::open(".")?;
-/// let version = Version::new(1, 0, 0);
+/// let version = Version::new(semver::Version::new(1, 0, 0));
 /// create_tag(&repo, &version)?;
 /// # Ok(())
 /// # }
@@ -195,7 +198,8 @@ fn fetch_remote_tags(remote: &mut Remote) -> Result<Vec<String>> {
     let create_callbacks = || {
         let mut callbacks = git2::RemoteCallbacks::new();
         callbacks.credentials(|_url, username_from_url, _allowed_types| {
-            let home_dir = home_dir().ok_or_else(|| git2::Error::from_str("Cannot get home directory"))?;
+            let home_dir =
+                home_dir().ok_or_else(|| git2::Error::from_str("Cannot get home directory"))?;
             let private_key_path = home_dir.join(".ssh/keys/privite/github");
             git2::Cred::ssh_key(
                 username_from_url.unwrap_or("git"),

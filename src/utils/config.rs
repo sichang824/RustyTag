@@ -89,9 +89,11 @@ pub fn handle_config_command(set: Option<String>, global: bool, local: bool) -> 
                 config.save()?;
                 println!("✔ Local configuration saved");
             }
-            _ => return Err(anyhow::anyhow!(
+            _ => {
+                return Err(anyhow::anyhow!(
                 "Invalid configuration: GITHUB_TOKEN must be global, VERSION_PREFIX must be local"
-            )),
+            ))
+            }
         }
     } else {
         // 显示当前配置
