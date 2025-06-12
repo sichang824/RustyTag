@@ -38,7 +38,7 @@ fmt:
 
 # 安装
 install:
-	cargo install --path .
+	cargo install --path . --force
 
 # 开发模式构建
 dev:

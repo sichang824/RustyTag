@@ -27,11 +27,23 @@ enum Commands {
     /// Initialize a new Git repository
     Init,
     /// Bump patch version (e.g., 1.0.0 → 1.0.1)
-    Patch,
+    Patch {
+        /// Set specific version instead of bumping
+        #[arg(short = 'V', long)]
+        version: Option<String>,
+    },
     /// Bump minor version (e.g., 1.0.0 → 1.1.0)
-    Minor,
+    Minor {
+        /// Set specific version instead of bumping
+        #[arg(short = 'V', long)]
+        version: Option<String>,
+    },
     /// Bump major version (e.g., 1.0.0 → 2.0.0)
-    Major,
+    Major {
+        /// Set specific version instead of bumping
+        #[arg(short = 'V', long)]
+        version: Option<String>,
+    },
     /// Reset local tags to match the remote repository
     Reset,
     /// Show the current version
@@ -96,15 +108,22 @@ fn main() -> Result<()> {
                 return Ok(());
             }
             let repo = Repository::open(".").context("Failed to open Git repository")?;
-            match cli.command {
-                Commands::Patch | Commands::Minor | Commands::Major => {
-                    let latest_version = get_latest_version()?;
-                    let new_version = match cli.command {
-                        Commands::Patch => latest_version.bump(BumpType::Patch),
-                        Commands::Minor => latest_version.bump(BumpType::Minor),
-                        Commands::Major => latest_version.bump(BumpType::Major),
+            match &cli.command {
+                Commands::Patch { version } | Commands::Minor { version } | Commands::Major { version } => {
+                    let bump_type = match cli.command {
+                        Commands::Patch { .. } => BumpType::Patch,
+                        Commands::Minor { .. } => BumpType::Minor,
+                        Commands::Major { .. } => BumpType::Major,
                         _ => unreachable!(),
                     };
+                    
+                    let new_version = if let Some(version_str) = version {
+                        Version::parse(version_str).context("Invalid version format")?
+                    } else {
+                        let latest_version = get_latest_version()?;
+                        latest_version.bump(bump_type)
+                    };
+                    
                     update_version_to_project(&new_version)?;
                     add_project_files(&repo)?;
                     create_changelog(&new_version)?;
@@ -120,12 +139,12 @@ fn main() -> Result<()> {
                     show_project_info(&repo)?;
                 }
                 Commands::Release { tag, list } => {
-                    if list {
+                    if *list {
                         tokio::runtime::Runtime::new()?
                             .block_on(async { utils::github::list_github_releases().await })?;
                     } else {
                         let version = if let Some(tag_str) = tag {
-                            Version::parse(&tag_str).context("Invalid version format")?
+                            Version::parse(tag_str).context("Invalid version format")?
                         } else {
                             get_latest_version()?
                         };
@@ -152,7 +171,7 @@ fn main() -> Result<()> {
                     utils::git::show_and_sync_tags(&repo)?;
                 }
                 Commands::Config { set, global, local } => {
-                    utils::config::handle_config_command(set, global, local)?;
+                    utils::config::handle_config_command(set.clone(), *global, *local)?;
                 }
                 _ => unreachable!(),
             }
